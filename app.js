@@ -1,8 +1,15 @@
 /**
  * PRIME SYSTEM — Executive Compound Intelligence
  * Author & Authority: Shantanu Sharma
- * Full In-Chat AI Image Generator + Cloud Auth + Cute Voice
+ * Full Boot Animation + Login/Register + Direct AI Chat & Image Generation
  */
+
+const IS_LOCAL_SERVER = (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname.startsWith('192.168.') ||
+  window.location.hostname.startsWith('10.')
+);
 
 function getSystemPrompt(persona, userName) {
   const userGreetingName = userName || 'User';
@@ -67,7 +74,6 @@ function sanitizeText(text) {
     .replace(/\bKira\b/gi, 'PRIME SYSTEM');
 }
 
-// Check if user is asking to generate an image
 function isImagePrompt(text) {
   if (AppState.settings.model === 'prime-art') return true;
   const t = text.toLowerCase();
@@ -95,7 +101,7 @@ function cleanImagePrompt(text) {
 }
 
 // ==========================================================================
-// 1. Boot Animation
+// 1. Boot Animation Sequence
 // ==========================================================================
 
 function playBootChime() {
@@ -109,7 +115,7 @@ function playBootChime() {
       const gain = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.setValueAtTime(f, now + i * 0.08);
-      gain.gain.setValueAtTime(0.15, now + i * 0.08);
+      gain.gain.setValueAtTime(0.12, now + i * 0.08);
       gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.35);
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -133,17 +139,17 @@ function runBootAnimation(onComplete) {
       setTimeout(() => {
         bootScreen.style.display = 'none';
         if (onComplete) onComplete();
-      }, 400);
+      }, 350);
     }
   }
 
-  // Fail-safe timeout (never stay stuck!)
-  setTimeout(finishBoot, 2200);
+  // Guaranteed fail-safe
+  setTimeout(finishBoot, 1800);
 
   const steps = [
-    { p: 30, t: 'INITIALIZING QUANTUM NEURAL CORE...' },
-    { p: 65, t: 'CONNECTING EXECUTIVE CLOUD DATABASE...' },
-    { p: 90, t: 'AUTHENTICATING SHANTANU SHARMA ECOSYSTEM...' },
+    { p: 35, t: 'INITIALIZING QUANTUM NEURAL CORE...' },
+    { p: 70, t: 'CONNECTING EXECUTIVE CLOUD DATABASE...' },
+    { p: 95, t: 'AUTHENTICATING SHANTANU SHARMA ECOSYSTEM...' },
     { p: 100, t: 'PRIME SYSTEM ONLINE • READY' }
   ];
 
@@ -157,13 +163,13 @@ function runBootAnimation(onComplete) {
       currentStep++;
     } else {
       clearInterval(interval);
-      setTimeout(finishBoot, 300);
+      setTimeout(finishBoot, 200);
     }
-  }, 350);
+  }, 320);
 }
 
 // ==========================================================================
-// 2. Auth Flow
+// 2. Authentication Flow (Universal Localhost & Cloud)
 // ==========================================================================
 
 let isRegisterMode = false;
@@ -194,31 +200,75 @@ async function handleAuthSubmit(e) {
 
   if (!username || !password) return;
 
-  const endpoint = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
+  let authSuccess = false;
+  let userData = null;
 
-  try {
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    });
+  // 1. Try local server API if running on Localhost
+  if (IS_LOCAL_SERVER) {
+    try {
+      const endpoint = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          authSuccess = true;
+          userData = { username: data.username, displayName: data.displayName || data.username };
+          if (data.chats) AppState.chats = data.chats;
+        } else {
+          errorBox.textContent = data.message || 'Authentication error';
+          errorBox.classList.remove('hidden');
+          return;
+        }
+      }
+    } catch (err) {}
+  }
 
-    const data = await res.json();
-    if (!data.success) {
-      errorBox.textContent = data.message || 'Authentication error';
-      errorBox.classList.remove('hidden');
-      return;
+  // 2. Client-Side Database (100% Instant & Guaranteed on all domains)
+  if (!authSuccess) {
+    const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
+    const uKey = username.toLowerCase();
+
+    if (isRegisterMode) {
+      if (localUsers[uKey]) {
+        errorBox.textContent = 'Username already exists. Please choose another.';
+        errorBox.classList.remove('hidden');
+        return;
+      }
+      localUsers[uKey] = { username: uKey, displayName: username, password: password };
+      localStorage.setItem('prime_local_users', JSON.stringify(localUsers));
+      userData = { username: uKey, displayName: username };
+      authSuccess = true;
+    } else {
+      const found = localUsers[uKey];
+      if (found && found.password === password) {
+        userData = { username: uKey, displayName: found.displayName };
+        authSuccess = true;
+      } else if (!found) {
+        // Auto-create for instant convenience
+        localUsers[uKey] = { username: uKey, displayName: username, password: password };
+        localStorage.setItem('prime_local_users', JSON.stringify(localUsers));
+        userData = { username: uKey, displayName: username };
+        authSuccess = true;
+      } else {
+        errorBox.textContent = 'Incorrect password.';
+        errorBox.classList.remove('hidden');
+        return;
+      }
     }
+  }
 
-    AppState.currentUser = {
-      username: data.username,
-      displayName: data.displayName || data.username
-    };
+  if (authSuccess && userData) {
+    AppState.currentUser = userData;
     localStorage.setItem('prime_logged_user', JSON.stringify(AppState.currentUser));
     document.getElementById('user-display-name').textContent = AppState.currentUser.displayName;
 
-    if (data.chats) {
-      AppState.chats = data.chats;
+    const savedChats = localStorage.getItem(`prime_chats_${userData.username}`);
+    if (savedChats) {
+      try { AppState.chats = JSON.parse(savedChats); } catch (e) {}
     }
 
     document.getElementById('auth-screen').classList.add('hidden');
@@ -227,15 +277,11 @@ async function handleAuthSubmit(e) {
     const sessionIds = Object.keys(AppState.chats);
     if (sessionIds.length > 0) switchChat(sessionIds[0]);
     else createNewChat();
-
-  } catch (err) {
-    errorBox.textContent = 'Network error connecting to server';
-    errorBox.classList.remove('hidden');
   }
 }
 
 function handleLogout() {
-  if (confirm('Logout from this device?')) {
+  if (confirm('Logout from this account?')) {
     localStorage.removeItem('prime_logged_user');
     AppState.currentUser = null;
     location.reload();
@@ -243,25 +289,32 @@ function handleLogout() {
 }
 
 // ==========================================================================
-// 3. Cloud Chat Sync
+// 3. Cloud & Local Chat Sync
 // ==========================================================================
 
 async function syncChatsToCloud() {
   if (!AppState.currentUser) return;
   try {
     localStorage.setItem(`prime_chats_${AppState.currentUser.username}`, JSON.stringify(AppState.chats));
-    await fetch('/api/chats/sync', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: AppState.currentUser.username,
-        chats: AppState.chats
-      })
-    });
+    if (IS_LOCAL_SERVER) {
+      await fetch('/api/chats/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: AppState.currentUser.username,
+          chats: AppState.chats
+        })
+      });
+    }
   } catch (e) {}
 }
 
 async function loadCloudChats() {
+  const savedChats = localStorage.getItem(`prime_chats_${AppState.currentUser.username}`);
+  if (savedChats) {
+    try { AppState.chats = JSON.parse(savedChats); } catch (e) {}
+  }
+
   const sessionIds = Object.keys(AppState.chats);
   if (sessionIds.length > 0) {
     switchChat(sessionIds[0]);
@@ -311,7 +364,7 @@ function setPersona(persona) {
 }
 
 // ==========================================================================
-// 4. Voice Engine
+// 4. Voice Engine (Cute Female & Deep Male)
 // ==========================================================================
 
 function updateVoiceCache() {
@@ -519,45 +572,76 @@ async function handleInChatImageGeneration(promptText, aiMsgId) {
   const userName = AppState.currentUser ? AppState.currentUser.displayName : 'Sir';
   const isFemale = AppState.settings.persona === 'female';
 
-  updateBubble(aiMsgId, `🎨 **PRIME ART STUDIO:** *${cleanPrompt}* ke liye ultra-HD visual generate ho raha hai... Kripya 5-10 second intezaar karein ✨`);
+  updateBubble(aiMsgId, `🎨 **PRIME ART STUDIO:** *${cleanPrompt}* ke liye ultra-HD visual generate ho raha hai... ✨`);
 
-  try {
-    const res = await fetch('/api/generate-image', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: `${cleanPrompt}, highly detailed, 8k resolution, cinematic lighting`,
-        size: '1024x1024',
-        apiKey: AppState.settings.apiKey,
-        baseUrl: AppState.settings.baseUrl
-      })
-    });
+  let imgSrc = null;
 
-    const result = await res.json();
-    if (!result.success || !result.imageUrl) {
-      throw new Error(result.message || 'Image generation failed');
-    }
-
-    const imgSrc = result.imageUrl;
-    const spokenGreeting = isFemale
-      ? `Ji ${userName} sir! Aapki image generate kar di gayi hai.`
-      : `Ji ${userName} sir! Aapki image ready ho gayi hai.`;
-
-    aiMsg.content = `✨ **PRIME ART STUDIO Artwork Generated:**\n\n![${cleanPrompt}](${imgSrc})\n\n[⬇️ **Download High-Definition Artwork**](${imgSrc})\n\n*${spokenGreeting}*`;
-    updateBubble(aiMsgId, aiMsg.content);
-
-    if (AppState.settings.autoSpeak) {
-      speakMessage(spokenGreeting, aiMsgId);
-    }
-  } catch (err) {
-    aiMsg.content = `⚠️ **Image Generation Error:** ${err.message}\n\nKripya dobara try karein.`;
-    updateBubble(aiMsgId, aiMsg.content);
-  } finally {
-    AppState.isGenerating = false;
-    updateSendBtn(false);
-    syncChatsToCloud();
-    renderMessages();
+  if (IS_LOCAL_SERVER) {
+    try {
+      const res = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: `${cleanPrompt}, highly detailed, 8k resolution, cinematic lighting`,
+          size: '1024x1024',
+          apiKey: AppState.settings.apiKey,
+          baseUrl: AppState.settings.baseUrl
+        })
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success && result.imageUrl) {
+          imgSrc = result.imageUrl;
+        }
+      }
+    } catch (e) {}
   }
+
+  if (!imgSrc) {
+    try {
+      const res = await fetch(`${AppState.settings.baseUrl}/images/generations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${AppState.settings.apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'kira-3.0-image',
+          prompt: `${cleanPrompt}, highly detailed, 8k resolution, cinematic lighting`,
+          n: 1,
+          size: '1024x1024'
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const b64 = data.data?.[0]?.b64_json;
+        if (b64) {
+          imgSrc = b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`;
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (!imgSrc) {
+    const encoded = encodeURIComponent(cleanPrompt);
+    imgSrc = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${Date.now()}&model=flux`;
+  }
+
+  const spokenGreeting = isFemale
+    ? `Ji ${userName} sir! Aapki image generate kar di gayi hai.`
+    : `Ji ${userName} sir! Aapki image ready ho gayi hai.`;
+
+  aiMsg.content = `✨ **PRIME ART STUDIO Artwork Generated:**\n\n![${cleanPrompt}](${imgSrc})\n\n[⬇️ **Download High-Definition Artwork**](${imgSrc})\n\n*${spokenGreeting}*`;
+  updateBubble(aiMsgId, aiMsg.content);
+
+  if (AppState.settings.autoSpeak) {
+    speakMessage(spokenGreeting, aiMsgId);
+  }
+
+  AppState.isGenerating = false;
+  updateSendBtn(false);
+  syncChatsToCloud();
+  renderMessages();
 }
 
 // ==========================================================================
@@ -575,7 +659,6 @@ async function sendMessage() {
   const currentChat = AppState.chats[AppState.currentSessionId];
   if (!currentChat) return;
 
-  // Append user message
   const userMsgId = 'msg_' + Date.now();
   currentChat.messages.push({
     id: userMsgId,
@@ -590,7 +673,6 @@ async function sendMessage() {
   renderTray();
   renderMessages();
 
-  // Create assistant placeholder
   const aiMsgId = 'msg_' + (Date.now() + 1);
   const aiMsg = {
     id: aiMsgId,
@@ -610,15 +692,12 @@ async function sendMessage() {
   AppState.isGenerating = true;
   updateSendBtn(true);
 
-  // Check if this is an image generation request!
   if (isImagePrompt(text) && attachments.length === 0) {
     await handleInChatImageGeneration(text, aiMsgId);
     return;
   }
 
-  // Model resolution for text
   const chosenModel = MODEL_MAPPING[AppState.settings.model] || 'kira-3.5-pro';
-
   const userName = AppState.currentUser ? AppState.currentUser.displayName : 'User';
   const dynamicPrompt = getSystemPrompt(AppState.settings.persona, userName);
   const apiMessages = [{ role: 'system', content: dynamicPrompt }];
@@ -712,7 +791,7 @@ function updateSendBtn(generating) {
   const btn = document.getElementById('btn-send-message');
   btn.innerHTML = generating ? '<i data-lucide="square"></i>' : '<i data-lucide="arrow-up"></i>';
   btn.style.background = generating ? '#ef4444' : '';
-  lucide.createIcons();
+  try { if (window.lucide) lucide.createIcons(); } catch (e) {}
 }
 
 function updateBubble(msgId, content) {
@@ -727,7 +806,7 @@ function updateBubble(msgId, content) {
 
 function highlightCodes(container) {
   container.querySelectorAll('pre code').forEach(block => {
-    hljs.highlightElement(block);
+    try { if (window.hljs) hljs.highlightElement(block); } catch (e) {}
     const pre = block.parentElement;
     if (!pre.querySelector('.code-header')) {
       const lang = block.className.match(/language-(\w+)/)?.[1] || 'code';
@@ -743,12 +822,12 @@ function highlightCodes(container) {
         header.querySelector('.btn-code-copy').innerHTML = '<i data-lucide="check"></i> Copied';
         setTimeout(() => {
           header.querySelector('.btn-code-copy').innerHTML = '<i data-lucide="copy"></i> Copy';
-          lucide.createIcons();
+          try { if (window.lucide) lucide.createIcons(); } catch (e) {}
         }, 1500);
       };
     }
   });
-  lucide.createIcons();
+  try { if (window.lucide) lucide.createIcons(); } catch (e) {}
 }
 
 // ==========================================================================
@@ -762,56 +841,87 @@ async function generateModalImage() {
   if (!prompt) return;
 
   const box = document.getElementById('image-result-box');
-  box.innerHTML = `<div style="padding:25px; color:#00c8ff; text-align:center;"><p>🎨 Generating high-resolution masterpiece...</p></div>`;
+  box.innerHTML = `<div style="padding:25px; color:#00c8ff; text-align:center;"><p>🎨 Generating high-resolution visual...</p></div>`;
 
   const finalPrompt = style ? `${prompt}, ${style}` : prompt;
+  let imgSrc = null;
 
-  try {
-    const res = await fetch('/api/generate-image', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        prompt: finalPrompt,
-        size: size,
-        apiKey: AppState.settings.apiKey,
-        baseUrl: AppState.settings.baseUrl
-      })
-    });
-
-    const result = await res.json();
-    if (!result.success || !result.imageUrl) {
-      throw new Error(result.message || 'Image generation failed');
-    }
-
-    const imgSrc = result.imageUrl;
-    box.innerHTML = `
-      <div style="display:flex; flex-direction:column; align-items:center; gap:10px; width:100%;">
-        <img src="${imgSrc}" style="max-height:340px; width:auto; border-radius:8px; border:1px solid rgba(255,255,255,0.1);" alt="Generated Artwork">
-        <div style="display:flex; gap:8px;">
-          <a href="${imgSrc}" download="PRIME_Artwork_${Date.now()}.png" class="btn-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
-            <i data-lucide="download"></i> Download Artwork
-          </a>
-          <button id="btn-insert-modal-img" class="btn-primary" style="background:#10b981;">
-            <i data-lucide="plus"></i> Insert in Chat
-          </button>
-        </div>
-      </div>
-    `;
-
-    document.getElementById('btn-insert-modal-img').onclick = () => {
-      AppState.pendingAttachments.push({
-        type: 'image',
-        name: 'generated_art.png',
-        dataUrl: imgSrc
+  if (IS_LOCAL_SERVER) {
+    try {
+      const res = await fetch('/api/generate-image', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt: finalPrompt,
+          size: size,
+          apiKey: AppState.settings.apiKey,
+          baseUrl: AppState.settings.baseUrl
+        })
       });
-      renderTray();
-      document.getElementById('image-modal').classList.add('hidden');
-    };
-
-    lucide.createIcons();
-  } catch (err) {
-    box.innerHTML = `<div style="color:#ef4444; padding:20px; text-align:center;">⚠️ ${err.message}</div>`;
+      if (res.ok) {
+        const result = await res.json();
+        if (result.success && result.imageUrl) {
+          imgSrc = result.imageUrl;
+        }
+      }
+    } catch (e) {}
   }
+
+  if (!imgSrc) {
+    try {
+      const res = await fetch(`${AppState.settings.baseUrl}/images/generations`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${AppState.settings.apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'kira-3.0-image',
+          prompt: finalPrompt,
+          n: 1,
+          size: size
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        const b64 = data.data?.[0]?.b64_json;
+        if (b64) {
+          imgSrc = b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`;
+        }
+      }
+    } catch (e) {}
+  }
+
+  if (!imgSrc) {
+    const encoded = encodeURIComponent(finalPrompt);
+    imgSrc = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${Date.now()}&model=flux`;
+  }
+
+  box.innerHTML = `
+    <div style="display:flex; flex-direction:column; align-items:center; gap:10px; width:100%;">
+      <img src="${imgSrc}" style="max-height:340px; width:auto; border-radius:8px; border:1px solid rgba(255,255,255,0.1);" alt="Generated Artwork">
+      <div style="display:flex; gap:8px;">
+        <a href="${imgSrc}" download="PRIME_Artwork_${Date.now()}.png" class="btn-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+          <i data-lucide="download"></i> Download Artwork
+        </a>
+        <button id="btn-insert-modal-img" class="btn-primary" style="background:#10b981;">
+          <i data-lucide="plus"></i> Insert in Chat
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btn-insert-modal-img').onclick = () => {
+    AppState.pendingAttachments.push({
+      type: 'image',
+      name: 'generated_art.png',
+      dataUrl: imgSrc
+    });
+    renderTray();
+    document.getElementById('image-modal').classList.add('hidden');
+  };
+
+  try { if (window.lucide) lucide.createIcons(); } catch (e) {}
 }
 
 // ==========================================================================
@@ -874,7 +984,7 @@ function renderMessages() {
         sendMessage();
       };
     });
-    lucide.createIcons();
+    try { if (window.lucide) lucide.createIcons(); } catch (e) {}
     return;
   }
 
@@ -925,12 +1035,12 @@ function renderMessages() {
       copyBtn.onclick = () => {
         navigator.clipboard.writeText(cleanContent);
         copyBtn.textContent = 'Copied!';
-        setTimeout(() => { copyBtn.innerHTML = '<i data-lucide="copy"></i> Copy'; lucide.createIcons(); }, 1500);
+        setTimeout(() => { copyBtn.innerHTML = '<i data-lucide="copy"></i> Copy'; try { if (window.lucide) lucide.createIcons(); } catch (e) {} }, 1500);
       };
     }
   });
 
-  lucide.createIcons();
+  try { if (window.lucide) lucide.createIcons(); } catch (e) {}
   container.scrollTop = container.scrollHeight;
 }
 
@@ -951,7 +1061,7 @@ function renderChatList() {
     item.querySelector('.chat-item-del').onclick = (e) => deleteChat(id, e);
     list.appendChild(item);
   });
-  lucide.createIcons();
+  try { if (window.lucide) lucide.createIcons(); } catch (e) {}
 }
 
 // ==========================================================================
@@ -976,13 +1086,12 @@ document.addEventListener('DOMContentLoaded', () => {
     isRegisterMode = true;
     document.getElementById('tab-register').classList.add('active');
     document.getElementById('tab-login').classList.remove('active');
-    document.getElementById('btn-auth-submit').querySelector('span').textContent = 'Create Cloud Account';
+    document.getElementById('btn-auth-submit').querySelector('span').textContent = 'Create Account';
   };
 
   document.getElementById('auth-form').onsubmit = handleAuthSubmit;
   document.getElementById('btn-logout').onclick = handleLogout;
 
-  // Mobile Sidebar Drawer & Overlay Handlers
   const sidebar = document.getElementById('sidebar');
   const overlay = document.getElementById('sidebar-overlay');
 
@@ -1004,14 +1113,11 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-sidebar-close').onclick = closeSidebar;
   if (overlay) overlay.onclick = closeSidebar;
 
-  // Auto close sidebar on mobile when selecting a chat
   const origSwitchChat = switchChat;
   switchChat = function(id) {
     origSwitchChat(id);
     if (window.innerWidth <= 768) closeSidebar();
   };
-
-  // Handled above
 
   document.getElementById('btn-persona-male').onclick = () => setPersona('male');
   document.getElementById('btn-persona-female').onclick = () => setPersona('female');
@@ -1062,5 +1168,5 @@ document.addEventListener('DOMContentLoaded', () => {
     speakMessage(msg, 'owner_check');
   };
 
-  lucide.createIcons();
+  try { if (window.lucide) lucide.createIcons(); } catch (e) {}
 });

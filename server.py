@@ -1,6 +1,5 @@
 import http.server
 import socketserver
-import webbrowser
 import os
 import sys
 import json
@@ -9,13 +8,14 @@ import urllib.parse
 import hashlib
 import time
 
+# Ensure UTF-8 output and flush
 if sys.platform == 'win32':
     try:
         sys.stdout.reconfigure(encoding='utf-8')
     except Exception:
         pass
 
-PORT = 8080
+PORT = int(os.environ.get("PORT", 8080))
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(DIRECTORY, "prime_database.json")
 
@@ -29,8 +29,11 @@ def load_db():
     return {"users": {}, "chats": {}}
 
 def save_db(data):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    try:
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"Database save warning: {e}")
 
 def hash_pw(pw):
     return hashlib.sha256(pw.encode('utf-8')).hexdigest()
@@ -58,7 +61,7 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
             res_data = {"error": "Invalid endpoint"}
             status = 404
 
-            # 1. Register
+            # 1. Register User
             if self.path == '/api/auth/register':
                 username = req_data.get('username', '').strip().lower()
                 display_name = req_data.get('username', '').strip()
@@ -85,7 +88,7 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
                         res_data = {"success": True, "username": username, "displayName": display_name}
                         status = 200
 
-            # 2. Login
+            # 2. Login User
             elif self.path == '/api/auth/login':
                 username = req_data.get('username', '').strip().lower()
                 password = req_data.get('password', '')
@@ -104,7 +107,7 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
                     res_data = {"success": False, "message": "Incorrect username or password."}
                     status = 401
 
-            # 3. Save / Sync Chats for user
+            # 3. Sync Chats to Cloud
             elif self.path == '/api/chats/sync':
                 username = req_data.get('username', '').strip().lower()
                 chats = req_data.get('chats', {})
@@ -118,7 +121,7 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
                     res_data = {"success": False, "message": "Unauthorized"}
                     status = 401
 
-            # 4. Multi-Tiered Robust Image Generator (Kira 3.0 + FLUX Backup)
+            # 4. Multi-Tiered AI Image Generator
             elif self.path == '/api/generate-image':
                 prompt = req_data.get('prompt', '').strip()
                 size = req_data.get('size', '1024x1024')
@@ -151,22 +154,22 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
                                 if b64:
                                     generated_img = b64 if (b64.startswith("data:") or b64.startswith("http")) else f"data:image/png;base64,{b64}"
                     except Exception as e:
-                        print(f"Kira image gen warning: {e}, using high-speed FLUX fallback...")
+                        pass
 
-                    # Attempt 2: High-Speed HD Fallback if Kira times out
+                    # Attempt 2: High-Speed HD Fallback
                     if not generated_img:
                         try:
                             encoded_prompt = urllib.parse.quote(prompt)
                             fallback_url = f"https://image.pollinations.ai/prompt/{encoded_prompt}?width=1024&height=1024&nologo=true&seed={int(time.time())}&model=flux"
                             generated_img = fallback_url
-                        except Exception as e:
+                        except Exception:
                             pass
 
                     if generated_img:
                         res_data = {"success": True, "imageUrl": generated_img}
                         status = 200
                     else:
-                        res_data = {"success": False, "message": "Failed to render image across all engines."}
+                        res_data = {"success": False, "message": "Failed to render image."}
                         status = 500
 
             self.send_response(status)
@@ -185,24 +188,21 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
         super().end_headers()
 
+class ReusableTCPServer(socketserver.TCPServer):
+    allow_reuse_address = True
+
 def run_server():
-    port = PORT
-    for _ in range(15):
-        try:
-            with socketserver.TCPServer(("", port), PrimeHandler) as httpd:
-                url = f"http://localhost:{port}"
-                print("="*60)
-                print("  * PRIME SYSTEM — Executive Server with 100% Reliable Image Engine!")
-                print(f"  * Web URL: {url}")
-                print("  * Creator & Owner: Shantanu Sharma")
-                print("="*60)
-                try:
-                    webbrowser.open(url)
-                except Exception:
-                    pass
-                httpd.serve_forever()
-        except OSError:
-            port += 1
+    print("=" * 60)
+    print("  * PRIME SYSTEM — Executive Cloud Server Initializing...")
+    print(f"  * Binding to 0.0.0.0 on Port: {PORT}")
+    print("  * Creator & Owner: Shantanu Sharma")
+    print("=" * 60)
+    sys.stdout.flush()
+
+    with ReusableTCPServer(("0.0.0.0", PORT), PrimeHandler) as httpd:
+        print(f"  * Server is LIVE and listening on port {PORT}!")
+        sys.stdout.flush()
+        httpd.serve_forever()
 
 if __name__ == "__main__":
     run_server()

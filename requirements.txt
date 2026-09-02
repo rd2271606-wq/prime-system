@@ -1,0 +1,2 @@
+# PRIME SYSTEM Python Dependencies
+# (Zero heavy dependencies needed - standard library powered)

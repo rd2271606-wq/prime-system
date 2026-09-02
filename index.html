@@ -26,6 +26,28 @@
 
   <!-- Custom CSS -->
   <link rel="stylesheet" href="style.css">
+
+  <!-- Inline Safe Boot Dismiss -->
+  <script>
+    function dismissBoot() {
+      var bs = document.getElementById('boot-screen');
+      if (bs) {
+        bs.classList.add('fade-out');
+        setTimeout(function() { bs.style.display = 'none'; }, 400);
+      }
+      var auth = document.getElementById('auth-screen');
+      var app = document.getElementById('app');
+      var user = localStorage.getItem('prime_logged_user');
+      if (user) {
+        if (app) app.classList.remove('hidden');
+        if (auth) auth.classList.add('hidden');
+      } else {
+        if (auth) auth.classList.remove('hidden');
+        if (app) app.classList.add('hidden');
+      }
+    }
+    setTimeout(dismissBoot, 1800);
+  </script>
 </head>
 <body>
   <!-- Ambient Classic Background Canvas -->
@@ -34,7 +56,7 @@
   <!-- ==========================================================================
        1. Futuristic PRIME SYSTEM Boot & Intro Animation
        ========================================================================== -->
-  <div id="boot-screen" class="boot-screen">
+  <div id="boot-screen" class="boot-screen" onclick="dismissBoot()" title="Click to skip">
     <div class="boot-container">
       <div class="boot-core-spinner">
         <div class="spinner-ring outer"></div>
@@ -62,12 +84,12 @@
           <i data-lucide="shield-check"></i>
         </div>
         <h2>PRIME SYSTEM</h2>
-        <p>Access your cloud conversations from any device or phone</p>
+        <p>Login or Create account to access your conversations</p>
       </div>
 
       <div class="auth-tabs">
-        <button id="tab-login" class="auth-tab active">Sign In</button>
-        <button id="tab-register" class="auth-tab">Create Account</button>
+        <button id="tab-login" class="auth-tab active" type="button">Sign In</button>
+        <button id="tab-register" class="auth-tab" type="button">Create Account</button>
       </div>
 
       <form id="auth-form" class="auth-form">
@@ -77,7 +99,7 @@
           <label>Username / Name</label>
           <div class="input-with-icon">
             <i data-lucide="user"></i>
-            <input type="text" id="auth-username" class="form-input" placeholder="Enter your username (e.g. Rahul)" required>
+            <input type="text" id="auth-username" class="form-input" placeholder="Enter your username (e.g. Rahul)" required autocomplete="username">
           </div>
         </div>
 
@@ -85,7 +107,7 @@
           <label>Password</label>
           <div class="input-with-icon">
             <i data-lucide="lock"></i>
-            <input type="password" id="auth-password" class="form-input" placeholder="Enter password" required>
+            <input type="password" id="auth-password" class="form-input" placeholder="Enter password" required autocomplete="current-password">
           </div>
         </div>
 
@@ -96,10 +118,13 @@
       </form>
 
       <div class="auth-footer">
-        <span>System Owner: <strong>Shantanu Sharma</strong></span>
+        <span>System Authority: <strong>Shantanu Sharma</strong></span>
       </div>
     </div>
   </div>
+
+  <!-- Mobile Sidebar Backdrop Overlay -->
+  <div id="sidebar-overlay" class="sidebar-overlay hidden"></div>
 
   <!-- ==========================================================================
        3. Main Application Workspace
@@ -107,7 +132,6 @@
   <div id="app" class="app-container hidden">
     
     <!-- Collapsible Sidebar -->
-    <div id="sidebar-overlay" class="sidebar-overlay hidden"></div>
     <aside id="sidebar" class="sidebar">
       <div class="sidebar-header">
         <div class="brand">
@@ -132,7 +156,7 @@
 
       <!-- Chat History List -->
       <div class="sidebar-section-header">
-        <span>CLOUD HISTORY</span>
+        <span>CONVERSATIONS</span>
       </div>
       <div id="chat-list" class="chat-list">
         <!-- Injected dynamically -->
@@ -254,7 +278,7 @@
           </div>
         </div>
         <div class="system-footnote">
-          <span>PRIME SYSTEM • Cloud Connected • Owner: Shantanu Sharma</span>
+          <span>PRIME SYSTEM • Executive Intelligence • Owner: Shantanu Sharma</span>
         </div>
       </footer>
     </main>
