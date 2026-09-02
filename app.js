@@ -1170,3 +1170,119 @@ document.addEventListener('DOMContentLoaded', () => {
 
   try { if (window.lucide) lucide.createIcons(); } catch (e) {}
 });
+
+// ==========================================================================
+// Active Session Heartbeat & Instant Kickout Engine
+// ==========================================================================
+
+function showBanKickoutModal(banInfo) {
+  if (AppState.isSpeaking && window.speechSynthesis) window.speechSynthesis.cancel();
+  localStorage.removeItem('prime_logged_user');
+  AppState.currentUser = null;
+
+  let modal = document.getElementById('ban-kickout-overlay');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'ban-kickout-overlay';
+    modal.style.cssText = 'position:fixed; inset:0; background:rgba(5,8,15,0.96); backdrop-filter:blur(20px); z-index:999999; display:flex; align-items:center; justify-content:center; padding:20px;';
+    document.body.appendChild(modal);
+  }
+
+  const durationStr = banInfo.until || 'Temporary';
+  const reasonStr = banInfo.reason || 'Administrative policy violation';
+  const bannedByStr = banInfo.bannedBy || 'Shantanu Sharma (Owner & Super Admin)';
+
+  modal.innerHTML = `
+    <div style="background:#0d121c; border:1px solid #ef4444; border-radius:16px; padding:32px 24px; max-width:440px; width:100%; text-align:center; box-shadow:0 0 50px rgba(239,68,68,0.4);">
+      <div style="width:64px; height:64px; border-radius:50%; background:rgba(239,68,68,0.15); border:1px solid #ef4444; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; color:#ef4444; font-size:28px;">
+        🚨
+      </div>
+      <h2 style="color:#ef4444; font-size:1.4rem; margin-bottom:8px;">ACCOUNT SUSPENDED / BANNED</h2>
+      <p style="color:#f1f5f9; font-size:0.95rem; line-height:1.5; margin-bottom:16px;">${banInfo.message || 'Aapko website se restrict kiya gaya hai.'}</p>
+      
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px; text-align:left; font-size:0.85rem; margin-bottom:20px;">
+        <div style="margin-bottom:8px;"><span style="color:#94a3b8;">⏳ Ban Duration:</span> <strong style="color:#f59e0b;">${durationStr}</strong></div>
+        <div style="margin-bottom:8px;"><span style="color:#94a3b8;">📝 Reason:</span> <strong style="color:#f1f5f9;">${reasonStr}</strong></div>
+        <div><span style="color:#94a3b8;">👑 Banned By:</span> <strong style="color:#00c8ff;">${bannedByStr}</strong></div>
+      </div>
+
+      <button onclick="location.reload()" style="background:#ef4444; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:700; cursor:pointer; width:100%;">
+        Acknowledge & Exit
+      </button>
+    </div>
+  `;
+}
+
+async function verifyActiveSession() {
+  if (!AppState.currentUser) return;
+  if (!IS_LOCAL_SERVER) return;
+
+  try {
+    const res = await fetch('/api/auth/verify-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: AppState.currentUser.username })
+    });
+
+    if (res.status === 403) {
+      const data = await res.json();
+      showBanKickoutModal(data.banInfo || {});
+    } else if (res.ok) {
+      const data = await res.json();
+      if (data.warnings && data.warnings.length > 0) {
+        showUserNoticeModal(data.warnings[0]);
+      }
+    }
+    }
+  } catch (e) {}
+}
+
+// Check session every 8 seconds
+setInterval(verifyActiveSession, 8000);
+
+// ==========================================================================
+// Warning Notice Alert Popups
+// ==========================================================================
+
+function showUserNoticeModal(warning) {
+  let modal = document.getElementById('user-notice-overlay');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'user-notice-overlay';
+    modal.style.cssText = 'position:fixed; inset:0; background:rgba(5,8,15,0.92); backdrop-filter:blur(16px); z-index:999998; display:flex; align-items:center; justify-content:center; padding:20px;';
+    document.body.appendChild(modal);
+  }
+
+  modal.classList.remove('hidden');
+  modal.innerHTML = `
+    <div style="background:#0d121c; border:1px solid #f59e0b; border-radius:16px; padding:28px 24px; max-width:440px; width:100%; text-align:center; box-shadow:0 0 40px rgba(245,158,11,0.3);">
+      <div style="width:56px; height:56px; border-radius:50%; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; color:#f59e0b; font-size:24px;">
+        ⚠️
+      </div>
+      <h2 style="color:#f59e0b; font-size:1.3rem; margin-bottom:8px;">OFFICIAL ADMINISTRATIVE NOTICE</h2>
+      <p style="color:#f1f5f9; font-size:0.95rem; line-height:1.5; margin-bottom:16px;">${warning.text || 'You have received an administrative warning notice.'}</p>
+      
+      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px; text-align:left; font-size:0.82rem; margin-bottom:18px;">
+        <div style="margin-bottom:6px;"><span style="color:#94a3b8;">👑 Issued By:</span> <strong style="color:#00c8ff;">${warning.sentBy || 'PRIME Administration'}</strong></div>
+        <div style="color:#ef4444; font-weight:600;">🚨 Policy Notice: Receiving 3 warning notices will result in an immediate automatic account suspension!</div>
+      </div>
+
+      <button id="btn-ack-notice" style="background:#f59e0b; color:#000; border:none; padding:12px 24px; border-radius:8px; font-weight:700; cursor:pointer; width:100%;">
+        I Acknowledge & Understand
+      </button>
+    </div>
+  `;
+
+  document.getElementById('btn-ack-notice').onclick = async () => {
+    modal.classList.add('hidden');
+    if (AppState.currentUser) {
+      try {
+        await fetch('/api/auth/ack-warning', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: AppState.currentUser.username, warningId: warning.id })
+        });
+      } catch (e) {}
+    }
+  };
+}

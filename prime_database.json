@@ -12,11 +12,24 @@
       "password": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
       "createdAt": 1788353685.2734244
     },
-    "rahul": {
-      "username": "rahul",
-      "displayName": "rahul",
-      "password": "91a73fd806ab2c005c13b4dc19130a884e909dea3f72d46e30266fe1a1f588d8",
-      "createdAt": 1788353685.2734244
+    "baduser": {
+      "username": "baduser",
+      "displayName": "baduser",
+      "password": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+      "createdAt": 1788363459.3005035,
+      "status": "active",
+      "suspendedUntil": 0,
+      "banReason": ""
+    },
+    "badactor": {
+      "username": "badactor",
+      "displayName": "badactor",
+      "password": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+      "createdAt": 1788366361.212831,
+      "status": "active",
+      "suspendedUntil": 0,
+      "banReason": "",
+      "bannedBy": ""
     }
   },
   "chats": {
@@ -63,40 +76,19 @@
         ]
       }
     },
-    "rahul": {
-      "chat_1788357699276": {
-        "id": "chat_1788357699276",
-        "title": "hi",
-        "createdAt": 1788357699276,
-        "messages": [
-          {
-            "id": "msg_1788357705707",
-            "role": "user",
-            "content": "hi",
-            "attachments": [],
-            "timestamp": 1788357705707
-          },
-          {
-            "id": "msg_1788357705744",
-            "role": "assistant",
-            "content": "Namaste rahul sir! ✨ Kahiye, main aapki kya madad kar sakti hoon?",
-            "timestamp": 1788357705743
-          },
-          {
-            "id": "msg_1788357895647",
-            "role": "user",
-            "content": "how to check local host in pc",
-            "attachments": [],
-            "timestamp": 1788357895647
-          },
-          {
-            "id": "msg_1788357895672",
-            "role": "assistant",
-            "content": "Rahul sir, localhost check karne ke liye aap ye steps follow kar sakte hain:\n\n1. **Browser Open Karein:** Sabse pehle apna web browser (jaise Chrome ya Edge) open karein.\n2. **Address Bar mein Type Karein:** Address bar mein `http://localhost` ya `http://127.0.0.1` type karke Enter dabayein.\n3. **Result Check Karein:** Agar aapka koi local server (jaise XAMPP, WAMP, ya Node.js) chal raha hai, toh aapko wahan default page ya aapki application dikh jayegi.\n\n**Ek aur baat:** Agar aapko specific port check karna hai (jaise port 3000), toh aap `http://localhost:3000` type kar sakte hain.\n\nKya aapne koi server start kiya hua hai, rahul sir? Main aur kaise madad kar sakti hoon? 😊",
-            "timestamp": 1788357895671
-          }
-        ]
-      }
+    "baduser": {},
+    "badactor": {}
+  },
+  "admins": {
+    "3": {
+      "username": "3",
+      "displayName": "s",
+      "password": "3",
+      "role": "Senior Staff",
+      "status": "active",
+      "createdBy": "Shantanu Sharma",
+      "createdAt": 1788367889.4063427
     }
-  }
+  },
+  "superAdminPin": "4444"
 }
