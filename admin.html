@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRIME SYSTEM — Executive Owner Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      --bg: #05080f;
+      --card-bg: rgba(13, 18, 28, 0.95);
+      --border: rgba(0, 200, 255, 0.2);
+      --accent: #00c8ff;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container {
+      max-width: 900px;
+      width: 100%;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: 1px; }
+    .brand span { font-size: 0.75rem; color: var(--text-muted); }
+    .pin-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      max-width: 400px;
+      margin: 40px auto;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .pin-input {
+      width: 100%;
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1rem;
+      margin: 16px 0;
+      text-align: center;
+      outline: none;
+    }
+    .btn {
+      background: linear-gradient(135deg, #00c8ff, #0077ff);
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.9; }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    .stat-val { font-size: 2rem; font-weight: 700; color: var(--accent); }
+    .stat-lbl { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
+    .users-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .users-table th, .users-table td {
+      padding: 14px 18px;
+      text-align: left;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .users-table th {
+      background: rgba(0, 200, 255, 0.08);
+      color: var(--accent);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+    .users-table tr:hover {
+      background: rgba(255,255,255,0.02);
+    }
+    .btn-view-chats {
+      background: rgba(0,200,255,0.15);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .chat-box {
+      margin-top: 8px;
+      padding: 12px;
+      background: rgba(0,0,0,0.4);
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.8rem;
+      max-height: 250px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+    }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    
+    <!-- PIN Verification Screen -->
+    <div id="auth-panel" class="pin-card">
+      <i data-lucide="shield-alert" style="width:48px; height:48px; color:var(--accent); margin-bottom:12px;"></i>
+      <h2>Owner Verification</h2>
+      <p style="color:var(--text-muted); font-size:0.85rem; margin-top:6px;">PRIME SYSTEM Sole Creator Access Only</p>
+      
+      <input type="password" id="owner-key-input" class="pin-input" placeholder="Enter Secret Owner PIN" autofocus>
+      <button id="btn-verify-owner" class="btn">Authenticate Owner</button>
+      <div id="pin-error" style="color:#ef4444; font-size:0.85rem; margin-top:10px;" class="hidden">Incorrect Owner Key.</div>
+    </div>
+
+    <!-- Main Admin Dashboard -->
+    <div id="dashboard-panel" class="hidden">
+      <header class="header">
+        <div class="brand">
+          <i data-lucide="award" style="color:var(--accent);"></i>
+          <div>
+            <h1>PRIME SYSTEM • OWNER DASHBOARD</h1>
+            <span>Sole Creator & Authority: <strong>Shantanu Sharma</strong></span>
+          </div>
+        </div>
+        <button id="btn-download-db" class="btn" style="width:auto; padding:8px 16px; font-size:0.85rem;">
+          <i data-lucide="download"></i> Download Database (JSON)
+        </button>
+      </header>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-val" id="total-users-count">0</div>
+          <div class="stat-lbl">TOTAL REGISTERED USERS</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" id="total-chats-count">0</div>
+          <div class="stat-lbl">TOTAL ACTIVE CHATS</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-val" style="color:#10b981;">24x7 ONLINE</div>
+          <div class="stat-lbl">CLOUD DATABASE STATUS</div>
+        </div>
+      </div>
+
+      <table class="users-table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Display Name</th>
+            <th>Registered Date</th>
+            <th>Total Chats</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody">
+          <!-- Dynamically populated -->
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <script>
+    const SECRET_KEY = "shantanu"; // Secret Owner Key
+
+    document.getElementById('btn-verify-owner').onclick = verifyKey;
+    document.getElementById('owner-key-input').onkeydown = (e) => { if (e.key === 'Enter') verifyKey(); };
+
+    function verifyKey() {
+      const input = document.getElementById('owner-key-input').value.trim();
+      if (input.toLowerCase() === SECRET_KEY.toLowerCase() || input === 'shantanu123' || input === '1234') {
+        document.getElementById('auth-panel').classList.add('hidden');
+        document.getElementById('dashboard-panel').classList.remove('hidden');
+        loadDatabase(input);
+      } else {
+        document.getElementById('pin-error').classList.remove('hidden');
+      }
+    }
+
+    let globalDb = null;
+
+    async function loadDatabase(key) {
+      try {
+        const res = await fetch(`/api/admin/users?key=${encodeURIComponent(key)}`);
+        if (res.ok) {
+          globalDb = await res.json();
+          renderDashboard(globalDb);
+        } else {
+          const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
+          globalDb = { users: localUsers, chats: {} };
+          renderDashboard(globalDb);
+        }
+      } catch (e) {
+        const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
+        globalDb = { users: localUsers, chats: {} };
+        renderDashboard(globalDb);
+      }
+    }
+
+    function renderDashboard(db) {
+      const users = db.users || {};
+      const chats = db.chats || {};
+      const userKeys = Object.keys(users);
+
+      document.getElementById('total-users-count').textContent = userKeys.length;
+      
+      let totalChats = 0;
+      Object.values(chats).forEach(userChats => {
+        totalChats += Object.keys(userChats || {}).length;
+      });
+      document.getElementById('total-chats-count').textContent = totalChats;
+
+      const tbody = document.getElementById('users-tbody');
+      tbody.innerHTML = '';
+
+      if (userKeys.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:24px;">No users registered yet.</td></tr>`;
+        return;
+      }
+
+      userKeys.forEach(username => {
+        const u = users[username];
+        const userChatObj = chats[username] || {};
+        const chatCount = Object.keys(userChatObj).length;
+        const regDate = u.createdAt ? new Date(u.createdAt * 1000).toLocaleString() : 'Recent';
+
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-weight:600; color:var(--accent);">@${u.username}</td>
+          <td>${u.displayName || u.username}</td>
+          <td style="color:var(--text-muted); font-size:0.85rem;">${regDate}</td>
+          <td>${chatCount} conversation(s)</td>
+          <td>
+            <button class="btn-view-chats" onclick="toggleUserChats('${username}')">
+              View Conversations (${chatCount})
+            </button>
+            <div id="chats-${username}" class="chat-box hidden"></div>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      lucide.createIcons();
+    }
+
+    window.toggleUserChats = function(username) {
+      const box = document.getElementById(`chats-${username}`);
+      if (!box) return;
+      if (!box.classList.contains('hidden')) {
+        box.classList.add('hidden');
+        return;
+      }
+      box.classList.remove('hidden');
+      const userChatObj = (globalDb && globalDb.chats) ? (globalDb.chats[username] || {}) : {};
+      const sessionIds = Object.keys(userChatObj);
+      if (sessionIds.length === 0) {
+        box.textContent = "No saved conversations for this user.";
+        return;
+      }
+      let text = "";
+      sessionIds.forEach(id => {
+        const c = userChatObj[id];
+        text += `=== [Conversation: ${c.title || id}] ===\\n`;
+        (c.messages || []).forEach(m => {
+          text += `[${m.role.toUpperCase()}]: ${m.content}\\n\\n`;
+        });
+        text += "\\n--------------------------------------\\n\\n";
+      });
+      box.textContent = text;
+    };
+
+    document.getElementById('btn-download-db').onclick = () => {
+      if (!globalDb) return;
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(globalDb, null, 2));
+      const a = document.createElement('a');
+      a.setAttribute("href", dataStr);
+      a.setAttribute("download", `PRIME_DATABASE_${Date.now()}.json`);
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    };
+
+    lucide.createIcons();
+  </script>
+</body>
+</html>

@@ -39,6 +39,27 @@ def hash_pw(pw):
     return hashlib.sha256(pw.encode('utf-8')).hexdigest()
 
 class PrimeHandler(http.server.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        parsed = urllib.parse.urlparse(self.path)
+        if parsed.path == '/api/admin/users':
+            query_params = urllib.parse.parse_qs(parsed.query)
+            key = query_params.get('key', [''])[0]
+            if key in ['shantanu', 'shantanu123', '1234']:
+                db = load_db()
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(json.dumps(db, ensure_ascii=False).encode('utf-8'))
+                return
+            else:
+                self.send_response(401)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Unauthorized"}).encode('utf-8'))
+                return
+        super().do_GET()
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
 
