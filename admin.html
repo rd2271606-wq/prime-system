@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PRIME SYSTEM — Executive Owner Dashboard</title>
+  <title>PRIME SYSTEM — Master Owner & Admin Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
   <style>
@@ -14,6 +14,10 @@
       --accent: #00c8ff;
       --text: #f1f5f9;
       --text-muted: #94a3b8;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --success: #10b981;
+      --super: #8b5cf6;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -21,15 +25,12 @@
       color: var(--text);
       font-family: 'Inter', sans-serif;
       min-height: 100vh;
-      padding: 24px;
+      padding: 24px 16px;
       display: flex;
       flex-direction: column;
       align-items: center;
     }
-    .container {
-      max-width: 900px;
-      width: 100%;
-    }
+    .container { max-width: 1150px; width: 100%; }
     .header {
       display: flex;
       justify-content: space-between;
@@ -37,12 +38,10 @@
       margin-bottom: 24px;
       padding-bottom: 16px;
       border-bottom: 1px solid var(--border);
-    }
-    .brand {
-      display: flex;
-      align-items: center;
+      flex-wrap: wrap;
       gap: 12px;
     }
+    .brand { display: flex; align-items: center; gap: 12px; }
     .brand h1 { font-size: 1.4rem; color: var(--accent); letter-spacing: 1px; }
     .brand span { font-size: 0.75rem; color: var(--text-muted); }
     .pin-card {
@@ -51,8 +50,8 @@
       border-radius: 12px;
       padding: 32px;
       text-align: center;
-      max-width: 400px;
-      margin: 40px auto;
+      max-width: 420px;
+      margin: 60px auto;
       box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
     .pin-input {
@@ -71,17 +70,47 @@
       background: linear-gradient(135deg, #00c8ff, #0077ff);
       color: #fff;
       border: none;
-      padding: 12px 24px;
+      padding: 10px 18px;
       border-radius: 8px;
       font-weight: 600;
       cursor: pointer;
-      width: 100%;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
       transition: opacity 0.2s;
     }
     .btn:hover { opacity: 0.9; }
+    .btn-danger { background: var(--danger); }
+    .btn-warning { background: var(--warning); color: #000; font-weight: 700; }
+    .btn-success { background: var(--success); }
+    .btn-super { background: linear-gradient(135deg, #8b5cf6, #6366f1); }
+    
+    .tabs-nav {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+    .tab-btn {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.85rem;
+    }
+    .tab-btn.active {
+      background: var(--accent);
+      color: #000;
+      border-color: var(--accent);
+    }
+
     .stats-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 16px;
       margin-bottom: 24px;
     }
@@ -89,43 +118,109 @@
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 12px;
-      padding: 20px;
+      padding: 18px;
       text-align: center;
     }
-    .stat-val { font-size: 2rem; font-weight: 700; color: var(--accent); }
-    .stat-lbl { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
-    .users-table {
-      width: 100%;
-      border-collapse: collapse;
+    .stat-val { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+    .stat-lbl { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+    
+    .table-container {
       background: var(--card-bg);
       border: 1px solid var(--border);
       border-radius: 12px;
-      overflow: hidden;
+      overflow-x: auto;
       margin-bottom: 24px;
     }
-    .users-table th, .users-table td {
-      padding: 14px 18px;
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .data-table th, .data-table td {
+      padding: 14px 16px;
       text-align: left;
       border-bottom: 1px solid rgba(255,255,255,0.05);
+      font-size: 0.88rem;
     }
-    .users-table th {
+    .data-table th {
       background: rgba(0, 200, 255, 0.08);
       color: var(--accent);
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: 600;
       text-transform: uppercase;
     }
-    .users-table tr:hover {
+    .data-table tr:hover {
       background: rgba(255,255,255,0.02);
     }
-    .btn-view-chats {
-      background: rgba(0,200,255,0.15);
-      border: 1px solid var(--accent);
-      color: var(--accent);
-      padding: 6px 12px;
+    
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-active { background: rgba(16, 185, 129, 0.2); color: var(--success); border: 1px solid var(--success); }
+    .badge-suspended { background: rgba(245, 158, 11, 0.2); color: var(--warning); border: 1px solid var(--warning); }
+    .badge-banned { background: rgba(239, 68, 68, 0.2); color: var(--danger); border: 1px solid var(--danger); }
+    .badge-super { background: rgba(139, 92, 246, 0.2); color: var(--super); border: 1px solid var(--super); }
+    .badge-strike { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid #f59e0b; }
+    
+    .action-btns {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .btn-action {
+      padding: 5px 10px;
       border-radius: 6px;
+      font-size: 0.76rem;
+      font-weight: 600;
       cursor: pointer;
-      font-size: 0.8rem;
+      border: 1px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-view-chats { background: rgba(0,200,255,0.15); border-color: var(--accent); color: var(--accent); }
+    .btn-notice { background: rgba(245, 158, 11, 0.15); border-color: var(--warning); color: #fbbf24; }
+    .btn-ban { background: rgba(239, 68, 68, 0.15); border-color: var(--danger); color: var(--danger); }
+    .btn-unban { background: rgba(16, 185, 129, 0.15); border-color: var(--success); color: var(--success); }
+    .btn-delete { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.1); color: #cbd5e1; }
+    .btn-delete:hover { background: rgba(239, 68, 68, 0.3); color: #ef4444; border-color: #ef4444; }
+
+    /* Modals */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .modal-box {
+      background: #0d121c;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      max-width: 460px;
+      width: 100%;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+    }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 6px; }
+    .form-control {
+      width: 100%;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.9rem;
+      outline: none;
     }
     .chat-box {
       margin-top: 8px;
@@ -146,13 +241,13 @@
     
     <!-- PIN Verification Screen -->
     <div id="auth-panel" class="pin-card">
-      <i data-lucide="shield-alert" style="width:48px; height:48px; color:var(--accent); margin-bottom:12px;"></i>
-      <h2>Owner Verification</h2>
-      <p style="color:var(--text-muted); font-size:0.85rem; margin-top:6px;">PRIME SYSTEM Sole Creator Access Only</p>
+      <i data-lucide="shield-check" style="width:48px; height:48px; color:var(--accent); margin-bottom:12px;"></i>
+      <h2>Admin Portal</h2>
+      <p style="color:var(--text-muted); font-size:0.85rem; margin-top:6px;">PRIME SYSTEM Administrative Authority</p>
       
-      <input type="password" id="owner-key-input" class="pin-input" placeholder="Enter Secret Owner PIN" autofocus>
-      <button id="btn-verify-owner" class="btn">Authenticate Owner</button>
-      <div id="pin-error" style="color:#ef4444; font-size:0.85rem; margin-top:10px;" class="hidden">Incorrect Owner Key.</div>
+      <input type="password" id="owner-key-input" class="pin-input" placeholder="Enter Super Admin PIN or Employee Password" autofocus>
+      <button id="btn-verify-owner" class="btn" style="width:100%;">Authenticate & Enter</button>
+      <div id="pin-error" style="color:#ef4444; font-size:0.85rem; margin-top:10px;" class="hidden">Invalid Key / Account Suspended.</div>
     </div>
 
     <!-- Main Admin Dashboard -->
@@ -161,131 +256,599 @@
         <div class="brand">
           <i data-lucide="award" style="color:var(--accent);"></i>
           <div>
-            <h1>PRIME SYSTEM • OWNER DASHBOARD</h1>
-            <span>Sole Creator & Authority: <strong>Shantanu Sharma</strong></span>
+            <h1 id="dash-title">PRIME SYSTEM • ADMIN DASHBOARD</h1>
+            <span id="dash-role-badge">Logged In As: <strong id="admin-user-title">Super Admin</strong></span>
           </div>
         </div>
-        <button id="btn-download-db" class="btn" style="width:auto; padding:8px 16px; font-size:0.85rem;">
-          <i data-lucide="download"></i> Download Database (JSON)
-        </button>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="btn-change-pin" class="btn hidden" style="background:rgba(255,255,255,0.08);">
+            <i data-lucide="key"></i> Change Master PIN
+          </button>
+          <button id="btn-open-create-admin" class="btn btn-super hidden">
+            <i data-lucide="user-plus"></i> + Create Employee Admin
+          </button>
+          <button id="btn-refresh-db" class="btn" style="background:rgba(255,255,255,0.1);">
+            <i data-lucide="refresh-cw"></i> Refresh
+          </button>
+          <button id="btn-download-db" class="btn">
+            <i data-lucide="download"></i> Export DB
+          </button>
+        </div>
       </header>
 
+      <!-- Tabs Navigation -->
+      <div class="tabs-nav">
+        <button id="tab-users-btn" class="tab-btn active">👥 Normal Users & Warning System</button>
+        <button id="tab-admins-btn" class="tab-btn hidden">🛡️ Employee / Sub-Admins Management</button>
+      </div>
+
+      <!-- Stats Grid -->
       <div class="stats-grid">
         <div class="stat-card">
           <div class="stat-val" id="total-users-count">0</div>
-          <div class="stat-lbl">TOTAL REGISTERED USERS</div>
+          <div class="stat-lbl">TOTAL USERS</div>
         </div>
         <div class="stat-card">
-          <div class="stat-val" id="total-chats-count">0</div>
-          <div class="stat-lbl">TOTAL ACTIVE CHATS</div>
+          <div class="stat-val" id="total-active-count" style="color:var(--success);">0</div>
+          <div class="stat-lbl">ACTIVE USERS</div>
         </div>
         <div class="stat-card">
-          <div class="stat-val" style="color:#10b981;">24x7 ONLINE</div>
-          <div class="stat-lbl">CLOUD DATABASE STATUS</div>
+          <div class="stat-val" id="total-banned-count" style="color:var(--danger);">0</div>
+          <div class="stat-lbl">BANNED / SUSPENDED</div>
+        </div>
+        <div class="stat-card" id="admin-stat-card">
+          <div class="stat-val" id="total-admins-count" style="color:var(--super);">1</div>
+          <div class="stat-lbl">STAFF & ADMINS</div>
         </div>
       </div>
 
-      <table class="users-table">
-        <thead>
-          <tr>
-            <th>Username</th>
-            <th>Display Name</th>
-            <th>Registered Date</th>
-            <th>Total Chats</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="users-tbody">
-          <!-- Dynamically populated -->
-        </tbody>
-      </table>
+      <!-- Tab 1: Normal Users -->
+      <div id="tab-users-content" class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Status</th>
+              <th>Warning Strikes</th>
+              <th>Registered</th>
+              <th>Chats</th>
+              <th>Actions & Notice Control</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody"></tbody>
+        </table>
+      </div>
+
+      <!-- Tab 2: Employee Admins (Super Admin Only) -->
+      <div id="tab-admins-content" class="table-container hidden">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Employee Admin</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Created By</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="admins-tbody"></tbody>
+        </table>
+      </div>
+
     </div>
 
   </div>
 
+  <!-- Send Notice Modal -->
+  <div id="notice-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 id="notice-modal-user-title" style="color:var(--warning);">⚠️ Send Warning Notice</h3>
+        <button id="btn-close-notice-modal" style="background:none; border:none; color:#fff; cursor:pointer; font-size:1.2rem;">×</button>
+      </div>
+
+      <div style="background:rgba(245,158,11,0.1); border:1px solid #f59e0b; border-radius:8px; padding:12px; margin-bottom:14px; font-size:0.8rem; color:#fde68a;">
+        <strong>3-Strike Rule Policy:</strong> If a user receives 3 warning notices, they will be <strong>AUTOMATICALLY SUSPENDED for 30 days</strong> and kicked out instantly!
+      </div>
+
+      <div class="form-group">
+        <label>Notice / Warning Message (User will see this in chat)</label>
+        <textarea id="notice-text-input" class="form-control" rows="3" placeholder="e.g. Warning: Please do not use inappropriate language or spam requests."></textarea>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button id="btn-confirm-send-notice" class="btn btn-warning" style="flex:1;">⚠️ Send Notice (+1 Strike)</button>
+        <button id="btn-cancel-notice" class="btn" style="background:rgba(255,255,255,0.1);">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ban / Suspend Modal -->
+  <div id="ban-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 id="modal-user-title" style="color:var(--accent);">Ban / Suspend User</h3>
+        <button id="btn-close-modal" style="background:none; border:none; color:#fff; cursor:pointer; font-size:1.2rem;">×</button>
+      </div>
+
+      <div class="form-group">
+        <label>Suspension Timeline</label>
+        <select id="ban-duration-select" class="form-control">
+          <option value="1">1 Hour Suspension</option>
+          <option value="6">6 Hours Suspension</option>
+          <option value="24" selected>24 Hours (1 Day)</option>
+          <option value="72">3 Days Suspension</option>
+          <option value="168">7 Days (1 Week)</option>
+          <option value="720">30 Days (1 Month)</option>
+          <option value="permanent">🚨 Permanent Ban (Forever)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Reason for Ban / Suspension</label>
+        <input type="text" id="ban-reason-input" class="form-control" placeholder="e.g. Abusive behavior, Spam" value="Violation of system terms">
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button id="btn-confirm-ban" class="btn btn-danger" style="flex:1;">🚨 Instant Ban & Kick Out</button>
+        <button id="btn-cancel-ban" class="btn" style="background:rgba(255,255,255,0.1);">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change Super Admin PIN Modal -->
+  <div id="change-pin-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="color:var(--accent);">🔑 Change Super Admin PIN</h3>
+        <button id="btn-close-pin-modal" style="background:none; border:none; color:#fff; cursor:pointer; font-size:1.2rem;">×</button>
+      </div>
+
+      <div class="form-group">
+        <label>Current Master PIN</label>
+        <input type="password" id="current-pin-input" class="form-control" placeholder="Enter current PIN">
+      </div>
+      <div class="form-group">
+        <label>New Master PIN</label>
+        <input type="password" id="new-pin-input" class="form-control" placeholder="Enter new secret PIN">
+      </div>
+      <div class="form-group">
+        <label>Confirm New PIN</label>
+        <input type="password" id="confirm-pin-input" class="form-control" placeholder="Confirm new secret PIN">
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button id="btn-save-new-pin" class="btn" style="flex:1;">Update Master PIN</button>
+        <button id="btn-cancel-pin" class="btn" style="background:rgba(255,255,255,0.1);">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create Employee Admin Modal -->
+  <div id="create-admin-modal" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <h3 style="color:var(--super);">Create Employee / Sub-Admin</h3>
+        <button id="btn-close-create-admin" style="background:none; border:none; color:#fff; cursor:pointer; font-size:1.2rem;">×</button>
+      </div>
+
+      <div class="form-group">
+        <label>Employee Username (Unique)</label>
+        <input type="text" id="new-admin-username" class="form-control" placeholder="e.g. aman_admin">
+      </div>
+      <div class="form-group">
+        <label>Display Name</label>
+        <input type="text" id="new-admin-name" class="form-control" placeholder="e.g. Aman Sharma">
+      </div>
+      <div class="form-group">
+        <label>Login Password / Key</label>
+        <input type="password" id="new-admin-password" class="form-control" placeholder="Set password for this admin">
+      </div>
+      <div class="form-group">
+        <label>Role Assignment</label>
+        <select id="new-admin-role" class="form-control">
+          <option value="Moderator Admin">Moderator Admin (Can Ban/Unban Users)</option>
+          <option value="Support Executive">Support Executive</option>
+          <option value="Senior Staff">Senior Staff</option>
+        </select>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:20px;">
+        <button id="btn-submit-create-admin" class="btn btn-super" style="flex:1;">Create Admin Account</button>
+        <button id="btn-cancel-create-admin" class="btn" style="background:rgba(255,255,255,0.1);">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    const SECRET_KEY = "shantanu"; // Secret Owner Key
+    let ACTIVE_KEY = "";
+    let globalDb = null;
+    let isSuperAdmin = false;
+    let targetUsername = "";
 
     document.getElementById('btn-verify-owner').onclick = verifyKey;
     document.getElementById('owner-key-input').onkeydown = (e) => { if (e.key === 'Enter') verifyKey(); };
 
-    function verifyKey() {
+    async function verifyKey() {
       const input = document.getElementById('owner-key-input').value.trim();
-      if (input.toLowerCase() === SECRET_KEY.toLowerCase() || input === 'shantanu123' || input === '1234') {
-        document.getElementById('auth-panel').classList.add('hidden');
-        document.getElementById('dashboard-panel').classList.remove('hidden');
-        loadDatabase(input);
-      } else {
+      if (!input) return;
+
+      try {
+        const res = await fetch(`/api/admin/users?key=${encodeURIComponent(input)}`);
+        if (res.ok) {
+          ACTIVE_KEY = input;
+          globalDb = await res.json();
+          isSuperAdmin = globalDb.isSuperAdmin;
+
+          document.getElementById('auth-panel').classList.add('hidden');
+          document.getElementById('dashboard-panel').classList.remove('hidden');
+          
+          document.getElementById('admin-user-title').textContent = globalDb.adminName;
+          if (isSuperAdmin) {
+            document.getElementById('btn-change-pin').classList.remove('hidden');
+            document.getElementById('btn-open-create-admin').classList.remove('hidden');
+            document.getElementById('tab-admins-btn').classList.remove('hidden');
+          }
+          renderDashboard();
+        } else {
+          document.getElementById('pin-error').classList.remove('hidden');
+        }
+      } catch (e) {
         document.getElementById('pin-error').classList.remove('hidden');
       }
     }
 
-    let globalDb = null;
-
-    async function loadDatabase(key) {
+    async function loadDatabase() {
       try {
-        const res = await fetch(`/api/admin/users?key=${encodeURIComponent(key)}`);
+        const res = await fetch(`/api/admin/users?key=${encodeURIComponent(ACTIVE_KEY)}`);
         if (res.ok) {
           globalDb = await res.json();
-          renderDashboard(globalDb);
-        } else {
-          const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
-          globalDb = { users: localUsers, chats: {} };
-          renderDashboard(globalDb);
+          renderDashboard();
         }
-      } catch (e) {
-        const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
-        globalDb = { users: localUsers, chats: {} };
-        renderDashboard(globalDb);
-      }
+      } catch (e) {}
     }
 
-    function renderDashboard(db) {
-      const users = db.users || {};
-      const chats = db.chats || {};
+    document.getElementById('btn-refresh-db').onclick = loadDatabase;
+
+    function renderDashboard() {
+      const users = globalDb.users || {};
+      const chats = globalDb.chats || {};
+      const admins = globalDb.admins || {};
       const userKeys = Object.keys(users);
 
       document.getElementById('total-users-count').textContent = userKeys.length;
+      document.getElementById('total-admins-count').textContent = Object.keys(admins).length + 1;
       
-      let totalChats = 0;
-      Object.values(chats).forEach(userChats => {
-        totalChats += Object.keys(userChats || {}).length;
-      });
-      document.getElementById('total-chats-count').textContent = totalChats;
+      let activeCount = 0;
+      let bannedCount = 0;
 
       const tbody = document.getElementById('users-tbody');
       tbody.innerHTML = '';
 
       if (userKeys.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-muted); padding:24px;">No users registered yet.</td></tr>`;
-        return;
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:var(--text-muted); padding:24px;">No registered users yet.</td></tr>`;
+      } else {
+        userKeys.forEach(username => {
+          const u = users[username];
+          const userChatObj = chats[username] || {};
+          const chatCount = Object.keys(userChatObj).length;
+          const regDate = u.createdAt ? new Date(u.createdAt * 1000).toLocaleDateString() : 'Recent';
+          const warnings = u.warnings || [];
+          const warnCount = warnings.length;
+
+          let statusBadge = '<span class="badge badge-active">Active</span>';
+          const now = Date.now() / 1000;
+
+          if (u.status === 'banned') {
+            statusBadge = '<span class="badge badge-banned">Banned</span>';
+            bannedCount++;
+          } else if (u.status === 'suspended') {
+            if (u.suspendedUntil && u.suspendedUntil > now) {
+              const untilStr = new Date(u.suspendedUntil * 1000).toLocaleString();
+              statusBadge = `<span class="badge badge-suspended" title="${untilStr}">Suspended</span>`;
+              bannedCount++;
+            } else {
+              activeCount++;
+            }
+          } else {
+            activeCount++;
+          }
+
+          let strikesBadge = `<span class="badge" style="background:rgba(255,255,255,0.05); color:var(--text-muted);">0 / 3</span>`;
+          if (warnCount === 1) strikesBadge = `<span class="badge badge-strike">⚠️ 1 / 3 Strike</span>`;
+          else if (warnCount === 2) strikesBadge = `<span class="badge badge-strike" style="background:rgba(239,68,68,0.2); color:#f87171; border-color:#ef4444;">🚨 2 / 3 Strikes</span>`;
+          else if (warnCount >= 3) strikesBadge = `<span class="badge badge-banned">💥 ${warnCount} Strikes (Banned)</span>`;
+
+          const isCurrentlyRestricted = (u.status === 'banned' || (u.status === 'suspended' && u.suspendedUntil > now));
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>
+              <strong style="color:var(--accent);">@${u.username}</strong>
+              <div style="font-size:0.78rem; color:var(--text-muted);">${u.displayName || u.username}</div>
+            </td>
+            <td>${statusBadge}</td>
+            <td>${strikesBadge}</td>
+            <td style="color:var(--text-muted); font-size:0.82rem;">${regDate}</td>
+            <td>${chatCount}</td>
+            <td>
+              <div class="action-btns">
+                <button class="btn-action btn-notice" onclick="openNoticeModal('${username}')" title="Send Official Notice">
+                  <i data-lucide="alert-triangle"></i> Notice
+                </button>
+                <button class="btn-action btn-view-chats" onclick="toggleUserChats('${username}')">
+                  <i data-lucide="message-square"></i> Chats
+                </button>
+                
+                ${isCurrentlyRestricted ? `
+                  <button class="btn-action btn-unban" onclick="unbanUser('${username}')">
+                    <i data-lucide="check"></i> Unban
+                  </button>
+                ` : `
+                  <button class="btn-action btn-ban" onclick="openBanModal('${username}')">
+                    <i data-lucide="shield-ban"></i> Ban / Suspend
+                  </button>
+                `}
+                
+                <button class="btn-action btn-delete" onclick="deleteUser('${username}')" title="Permanently Delete User">
+                  <i data-lucide="trash-2"></i>
+                </button>
+              </div>
+              <div id="chats-${username}" class="chat-box hidden"></div>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
       }
 
-      userKeys.forEach(username => {
-        const u = users[username];
-        const userChatObj = chats[username] || {};
-        const chatCount = Object.keys(userChatObj).length;
-        const regDate = u.createdAt ? new Date(u.createdAt * 1000).toLocaleString() : 'Recent';
+      document.getElementById('total-active-count').textContent = activeCount;
+      document.getElementById('total-banned-count').textContent = bannedCount;
 
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td style="font-weight:600; color:var(--accent);">@${u.username}</td>
-          <td>${u.displayName || u.username}</td>
-          <td style="color:var(--text-muted); font-size:0.85rem;">${regDate}</td>
-          <td>${chatCount} conversation(s)</td>
-          <td>
-            <button class="btn-view-chats" onclick="toggleUserChats('${username}')">
-              View Conversations (${chatCount})
-            </button>
-            <div id="chats-${username}" class="chat-box hidden"></div>
-          </td>
+      // Render Employee Admins Table
+      if (isSuperAdmin) {
+        const adminTbody = document.getElementById('admins-tbody');
+        adminTbody.innerHTML = `
+          <tr style="background:rgba(139,92,246,0.08);">
+            <td>
+              <strong style="color:var(--super);">@shantanu (Owner)</strong>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Shantanu Sharma</div>
+            </td>
+            <td><span class="badge badge-super">Sole Creator & Super Admin</span></td>
+            <td><span class="badge badge-active">Active</span></td>
+            <td>Supreme Head</td>
+            <td><span style="color:var(--text-muted); font-size:0.8rem;">Protected Authority</span></td>
+          </tr>
         `;
-        tbody.appendChild(tr);
-      });
+
+        Object.keys(admins).forEach(aKey => {
+          const adm = admins[aKey];
+          const isBanned = adm.status === 'banned';
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>
+              <strong style="color:var(--accent);">@${adm.username}</strong>
+              <div style="font-size:0.75rem; color:var(--text-muted);">${adm.displayName}</div>
+            </td>
+            <td><span class="badge" style="background:rgba(0,200,255,0.1); color:var(--accent);">${adm.role}</span></td>
+            <td>${isBanned ? '<span class="badge badge-banned">Suspended / Banned</span>' : '<span class="badge badge-active">Active</span>'}</td>
+            <td>${adm.createdBy || 'Shantanu Sharma'}</td>
+            <td>
+              <div class="action-btns">
+                ${isBanned ? `
+                  <button class="btn-action btn-unban" onclick="toggleAdminStatus('${aKey}', 'unban')"><i data-lucide="check"></i> Unban</button>
+                ` : `
+                  <button class="btn-action btn-ban" onclick="toggleAdminStatus('${aKey}', 'ban')"><i data-lucide="shield-ban"></i> Ban</button>
+                `}
+                <button class="btn-action btn-delete" onclick="toggleAdminStatus('${aKey}', 'delete')"><i data-lucide="trash-2"></i> Delete</button>
+              </div>
+            </td>
+          `;
+          adminTbody.appendChild(tr);
+        });
+      }
 
       lucide.createIcons();
     }
 
+    // Tab Switching
+    document.getElementById('tab-users-btn').onclick = () => {
+      document.getElementById('tab-users-btn').classList.add('active');
+      document.getElementById('tab-admins-btn').classList.remove('active');
+      document.getElementById('tab-users-content').classList.remove('hidden');
+      document.getElementById('tab-admins-content').classList.add('hidden');
+    };
+
+    document.getElementById('tab-admins-btn').onclick = () => {
+      document.getElementById('tab-admins-btn').classList.add('active');
+      document.getElementById('tab-users-btn').classList.remove('active');
+      document.getElementById('tab-admins-content').classList.remove('hidden');
+      document.getElementById('tab-users-content').classList.add('hidden');
+    };
+
+    // Notice Modal
+    window.openNoticeModal = function(username) {
+      targetUsername = username;
+      document.getElementById('notice-modal-user-title').textContent = `⚠️ Send Notice to @${username}`;
+      document.getElementById('notice-text-input').value = "";
+      document.getElementById('notice-modal').classList.remove('hidden');
+    };
+    function closeNoticeModal() {
+      document.getElementById('notice-modal').classList.add('hidden');
+      targetUsername = "";
+    }
+    document.getElementById('btn-close-notice-modal').onclick = closeNoticeModal;
+    document.getElementById('btn-cancel-notice').onclick = closeNoticeModal;
+
+    document.getElementById('btn-confirm-send-notice').onclick = async function() {
+      if (!targetUsername) return;
+      const text = document.getElementById('notice-text-input').value.trim();
+      if (!text) { alert('Please enter notice text.'); return; }
+
+      try {
+        const res = await fetch('/api/admin/send-notice', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: ACTIVE_KEY, username: targetUsername, noticeText: text })
+        });
+        const data = await res.json();
+        alert(data.message || 'Notice dispatched!');
+        closeNoticeModal();
+        loadDatabase();
+      } catch (e) { alert('Error: ' + e.message); }
+    };
+
+    // Change Master PIN
+    document.getElementById('btn-change-pin').onclick = () => {
+      document.getElementById('change-pin-modal').classList.remove('hidden');
+    };
+    function closePinModal() {
+      document.getElementById('change-pin-modal').classList.add('hidden');
+    }
+    document.getElementById('btn-close-pin-modal').onclick = closePinModal;
+    document.getElementById('btn-cancel-pin').onclick = closePinModal;
+
+    document.getElementById('btn-save-new-pin').onclick = async () => {
+      const oldPin = document.getElementById('current-pin-input').value.trim();
+      const newPin = document.getElementById('new-pin-input').value.trim();
+      const confirmPin = document.getElementById('confirm-pin-input').value.trim();
+
+      if (!oldPin || !newPin) { alert('Please fill in all PIN fields.'); return; }
+      if (newPin !== confirmPin) { alert('New PIN and Confirm PIN do not match!'); return; }
+
+      try {
+        const res = await fetch('/api/admin/change-pin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ oldPin: oldPin, newPin: newPin })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Master PIN successfully changed! Please use your new PIN next time.');
+          ACTIVE_KEY = newPin;
+          closePinModal();
+        } else {
+          alert('Error: ' + data.message);
+        }
+      } catch (e) { alert('Error: ' + e.message); }
+    };
+
+    // Ban Modal Control
+    window.openBanModal = function(username) {
+      targetUsername = username;
+      document.getElementById('modal-user-title').textContent = `Ban & Instant Kickout @${username}`;
+      document.getElementById('ban-modal').classList.remove('hidden');
+    };
+    function closeModal() {
+      document.getElementById('ban-modal').classList.add('hidden');
+      targetUsername = "";
+    }
+    document.getElementById('btn-close-modal').onclick = closeModal;
+    document.getElementById('btn-cancel-ban').onclick = closeModal;
+
+    document.getElementById('btn-confirm-ban').onclick = async function() {
+      if (!targetUsername) return;
+      const durationVal = document.getElementById('ban-duration-select').value;
+      const reason = document.getElementById('ban-reason-input').value.trim();
+
+      const action = (durationVal === 'permanent') ? 'ban' : 'suspend';
+      const durationHours = (durationVal === 'permanent') ? 0 : parseFloat(durationVal);
+
+      try {
+        const res = await fetch('/api/admin/user-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            key: ACTIVE_KEY,
+            username: targetUsername,
+            action: action,
+            durationHours: durationHours,
+            reason: reason
+          })
+        });
+        const data = await res.json();
+        alert(data.message || 'Action executed!');
+        closeModal();
+        loadDatabase();
+      } catch (e) { alert('Error: ' + e.message); }
+    };
+
+    // Unban User
+    window.unbanUser = async function(username) {
+      if (!confirm(`Unban @${username}?`)) return;
+      try {
+        const res = await fetch('/api/admin/user-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: ACTIVE_KEY, username: username, action: 'unban' })
+        });
+        const data = await res.json();
+        alert(data.message || 'User Unbanned!');
+        loadDatabase();
+      } catch (e) { alert('Error: ' + e.message); }
+    };
+
+    // Permanently Delete User
+    window.deleteUser = async function(username) {
+      if (!confirm(`Are you sure you want to PERMANENTLY REMOVE @${username} and all their conversations from the database?`)) return;
+      try {
+        const res = await fetch('/api/admin/user-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: ACTIVE_KEY, username: username, action: 'delete' })
+        });
+        const data = await res.json();
+        alert(data.message || 'User permanently removed!');
+        loadDatabase();
+      } catch (e) { alert('Error: ' + e.message); }
+    };
+
+    // Create Employee Admin Controls
+    document.getElementById('btn-open-create-admin').onclick = () => {
+      document.getElementById('create-admin-modal').classList.remove('hidden');
+    };
+    function closeCreateAdminModal() {
+      document.getElementById('create-admin-modal').classList.add('hidden');
+    }
+    document.getElementById('btn-close-create-admin').onclick = closeCreateAdminModal;
+    document.getElementById('btn-cancel-create-admin').onclick = closeCreateAdminModal;
+
+    document.getElementById('btn-submit-create-admin').onclick = async () => {
+      const u = document.getElementById('new-admin-username').value.trim();
+      const n = document.getElementById('new-admin-name').value.trim();
+      const p = document.getElementById('new-admin-password').value.trim();
+      const r = document.getElementById('new-admin-role').value;
+
+      if (!u || !p) { alert('Username and password are required.'); return; }
+
+      try {
+        const res = await fetch('/api/admin/create-employee', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: ACTIVE_KEY, username: u, displayName: n, password: p, role: r })
+        });
+        const data = await res.json();
+        alert(data.message || 'Admin created!');
+        closeCreateAdminModal();
+        loadDatabase();
+      } catch (e) { alert('Error: ' + e.message); }
+    };
+
+    // Toggle Admin Status
+    window.toggleAdminStatus = async function(username, action) {
+      if (!confirm(`Are you sure you want to ${action.toUpperCase()} employee @${username}?`)) return;
+      try {
+        const res = await fetch('/api/admin/employee-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: ACTIVE_KEY, username: username, action: action })
+        });
+        const data = await res.json();
+        alert(data.message || 'Employee status updated!');
+        loadDatabase();
+      } catch (e) { alert('Error: ' + e.message); }
+    };
+
+    // View Chats Toggle
     window.toggleUserChats = function(username) {
       const box = document.getElementById(`chats-${username}`);
       if (!box) return;
@@ -303,11 +866,11 @@
       let text = "";
       sessionIds.forEach(id => {
         const c = userChatObj[id];
-        text += `=== [Conversation: ${c.title || id}] ===\\n`;
+        text += `=== [Conversation: ${c.title || id}] ===\n`;
         (c.messages || []).forEach(m => {
-          text += `[${m.role.toUpperCase()}]: ${m.content}\\n\\n`;
+          text += `[${m.role.toUpperCase()}]: ${m.content}\n\n`;
         });
-        text += "\\n--------------------------------------\\n\\n";
+        text += "\n--------------------------------------\n\n";
       });
       box.textContent = text;
     };
@@ -317,7 +880,7 @@
       const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(globalDb, null, 2));
       const a = document.createElement('a');
       a.setAttribute("href", dataStr);
-      a.setAttribute("download", `PRIME_DATABASE_${Date.now()}.json`);
+      a.setAttribute("download", `PRIME_MASTER_DATABASE_${Date.now()}.json`);
       document.body.appendChild(a);
       a.click();
       a.remove();

@@ -8,7 +8,6 @@ import urllib.parse
 import hashlib
 import time
 
-# Ensure UTF-8 output and flush
 if sys.platform == 'win32':
     try:
         sys.stdout.reconfigure(encoding='utf-8')
@@ -23,43 +22,77 @@ def load_db():
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                db = json.load(f)
+                if "users" not in db: db["users"] = {}
+                if "chats" not in db: db["chats"] = {}
+                if "admins" not in db: db["admins"] = {}
+                if "superAdminPin" not in db: db["superAdminPin"] = "shantanu"
+                return db
         except Exception:
             pass
-    return {"users": {}, "chats": {}}
+    return {"users": {}, "chats": {}, "admins": {}, "superAdminPin": "shantanu"}
 
 def save_db(data):
     try:
         with open(DATA_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
     except Exception as e:
-        print(f"Database save warning: {e}")
+        print(f"Database save error: {e}")
 
 def hash_pw(pw):
     return hashlib.sha256(pw.encode('utf-8')).hexdigest()
 
-class PrimeHandler(http.server.SimpleHTTPRequestHandler):
-    def do_GET(self):
-        parsed = urllib.parse.urlparse(self.path)
-        if parsed.path == '/api/admin/users':
-            query_params = urllib.parse.parse_qs(parsed.query)
-            key = query_params.get('key', [''])[0]
-            if key in ['shantanu', 'shantanu123', '1234']:
-                db = load_db()
-                self.send_response(200)
-                self.send_header('Content-Type', 'application/json; charset=utf-8')
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
-                self.wfile.write(json.dumps(db, ensure_ascii=False).encode('utf-8'))
-                return
-            else:
-                self.send_response(401)
-                self.send_header('Content-Type', 'application/json')
-                self.end_headers()
-                self.wfile.write(json.dumps({"error": "Unauthorized"}).encode('utf-8'))
-                return
-        super().do_GET()
+def check_ban_details(user):
+    status = user.get("status", "active")
+    if status == "active":
+        return False, {}
+    
+    banned_by = user.get("bannedBy", "Shantanu Sharma (Super Admin)")
+    reason = user.get("banReason", "System policy violation")
 
+    if status == "banned":
+        return True, {
+            "type": "permanent",
+            "message": "Aapka account permanently BAN kar diya gaya hai.",
+            "reason": reason,
+            "bannedBy": banned_by,
+            "until": "Permanent"
+        }
+
+    if status == "suspended":
+        until = user.get("suspendedUntil", 0)
+        now = time.time()
+        if now >= until:
+            user["status"] = "active"
+            user["suspendedUntil"] = 0
+            user["banReason"] = ""
+            user["bannedBy"] = ""
+            return False, {}
+        else:
+            time_left_str = time.strftime('%d %b %Y, %I:%M %p', time.localtime(until))
+            return True, {
+                "type": "suspended",
+                "message": f"Aapka account {time_left_str} tak SUSPEND kiya gaya hai.",
+                "reason": reason,
+                "bannedBy": banned_by,
+                "until": time_left_str
+            }
+
+    return False, {}
+
+def authenticate_admin(req_key, db):
+    master_pin = db.get("superAdminPin", "shantanu")
+    if req_key in [master_pin, "shantanu", "shantanu123", "superadmin"]:
+        return True, True, "Shantanu Sharma (Owner & Super Admin)"
+    
+    for admin_u, adm in db.get("admins", {}).items():
+        if adm.get("status") == "active":
+            if req_key == admin_u or req_key == adm.get("password"):
+                return True, False, f"{adm.get('displayName', admin_u)} (Admin)"
+    
+    return False, False, None
+
+class PrimeHandler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
 
@@ -70,8 +103,38 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
         self.end_headers()
 
+    def do_GET(self):
+        parsed = urllib.parse.urlparse(self.path)
+        if parsed.path == '/api/admin/users':
+            query_params = urllib.parse.parse_qs(parsed.query)
+            key = query_params.get('key', [''])[0]
+            db = load_db()
+            valid, is_super, admin_name = authenticate_admin(key, db)
+            if valid:
+                data_to_send = {
+                    "users": db.get("users", {}),
+                    "chats": db.get("chats", {}),
+                    "admins": db.get("admins", {}) if is_super else {},
+                    "isSuperAdmin": is_super,
+                    "adminName": admin_name
+                }
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json; charset=utf-8')
+                self.send_header('Access-Control-Allow-Origin', '*')
+                self.end_headers()
+                self.wfile.write(json.dumps(data_to_send, ensure_ascii=False).encode('utf-8'))
+                return
+            else:
+                self.send_response(401)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({"error": "Unauthorized"}).encode('utf-8'))
+                return
+        super().do_GET()
+
     def do_POST(self):
-        if self.path.startswith('/api/'):
+        clean_path = urllib.parse.urlparse(self.path).path
+        if clean_path.startswith('/api/'):
             content_length = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(content_length).decode('utf-8')
             try:
@@ -83,7 +146,7 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
             status = 404
 
             # 1. Register User
-            if self.path == '/api/auth/register':
+            if clean_path == '/api/auth/register':
                 username = req_data.get('username', '').strip().lower()
                 display_name = req_data.get('username', '').strip()
                 password = req_data.get('password', '')
@@ -101,7 +164,12 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
                             "username": username,
                             "displayName": display_name,
                             "password": hash_pw(password),
-                            "createdAt": time.time()
+                            "createdAt": time.time(),
+                            "status": "active",
+                            "suspendedUntil": 0,
+                            "banReason": "",
+                            "bannedBy": "",
+                            "warnings": []
                         }
                         if username not in db["chats"]:
                             db["chats"][username] = {}
@@ -110,40 +178,101 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
                         status = 200
 
             # 2. Login User
-            elif self.path == '/api/auth/login':
+            elif clean_path == '/api/auth/login':
                 username = req_data.get('username', '').strip().lower()
                 password = req_data.get('password', '')
                 db = load_db()
                 user = db["users"].get(username)
 
                 if user and user.get("password") == hash_pw(password):
-                    res_data = {
-                        "success": True, 
-                        "username": username, 
-                        "displayName": user.get("displayName", username),
-                        "chats": db["chats"].get(username, {})
-                    }
-                    status = 200
+                    is_banned, ban_info = check_ban_details(user)
+                    save_db(db)
+                    
+                    if is_banned:
+                        res_data = {
+                            "success": False, 
+                            "isBanned": True,
+                            "banInfo": ban_info,
+                            "message": ban_info.get("message")
+                        }
+                        status = 403
+                    else:
+                        res_data = {
+                            "success": True, 
+                            "username": username, 
+                            "displayName": user.get("displayName", username),
+                            "chats": db["chats"].get(username, {}),
+                            "warnings": user.get("warnings", [])
+                        }
+                        status = 200
                 else:
                     res_data = {"success": False, "message": "Incorrect username or password."}
                     status = 401
 
-            # 3. Sync Chats to Cloud
-            elif self.path == '/api/chats/sync':
+            # 3. Session Heartbeat & Warning Checker
+            elif clean_path == '/api/auth/verify-session':
                 username = req_data.get('username', '').strip().lower()
-                chats = req_data.get('chats', {})
                 db = load_db()
-                if username in db["users"]:
-                    db["chats"][username] = chats
+                user = db["users"].get(username)
+
+                if not user:
+                    res_data = {"active": True, "warnings": []}
+                    status = 200
+                else:
+                    is_banned, ban_info = check_ban_details(user)
+                    save_db(db)
+                    if is_banned:
+                        res_data = {
+                            "active": False,
+                            "isBanned": True,
+                            "banInfo": ban_info
+                        }
+                        status = 403
+                    else:
+                        # Return unacknowledged warnings
+                        unack_warnings = [w for w in user.get("warnings", []) if not w.get("acknowledged", False)]
+                        res_data = {"active": True, "warnings": unack_warnings}
+                        status = 200
+
+            # 4. Acknowledge Warning Notice
+            elif clean_path == '/api/auth/ack-warning':
+                username = req_data.get('username', '').strip().lower()
+                warn_id = req_data.get('warningId', '')
+                db = load_db()
+                user = db["users"].get(username)
+                if user:
+                    for w in user.get("warnings", []):
+                        if w.get("id") == warn_id:
+                            w["acknowledged"] = True
                     save_db(db)
                     res_data = {"success": True}
                     status = 200
                 else:
+                    res_data = {"success": False}
+                    status = 404
+
+            # 5. Sync Chats to Cloud
+            elif clean_path == '/api/chats/sync':
+                username = req_data.get('username', '').strip().lower()
+                chats = req_data.get('chats', {})
+                db = load_db()
+                user = db["users"].get(username)
+                if user:
+                    is_banned, ban_info = check_ban_details(user)
+                    if is_banned:
+                        res_data = {"success": False, "isBanned": True, "banInfo": ban_info}
+                        status = 403
+                    else:
+                        db["chats"][username] = chats
+                        save_db(db)
+                        res_data = {"success": True}
+                        status = 200
+                else:
                     res_data = {"success": False, "message": "Unauthorized"}
                     status = 401
 
-            # 4. Multi-Tiered AI Image Generator
-            elif self.path == '/api/generate-image':
+            # 6. Multi-Tiered AI Image Generator
+            elif clean_path == '/api/generate-image':
                 prompt = req_data.get('prompt', '').strip()
                 size = req_data.get('size', '1024x1024')
                 api_key = req_data.get('apiKey', 'kira_1a3bdff06cd7b63cfe008c6a393ef7d8')
@@ -154,7 +283,6 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
                     status = 400
                 else:
                     generated_img = None
-                    # Attempt 1: Kira 3.0 Image
                     try:
                         payload = {
                             "model": "kira-3.0-image",
@@ -174,10 +302,9 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
                                 b64 = items[0].get("b64_json") or items[0].get("url")
                                 if b64:
                                     generated_img = b64 if (b64.startswith("data:") or b64.startswith("http")) else f"data:image/png;base64,{b64}"
-                    except Exception as e:
+                    except Exception:
                         pass
 
-                    # Attempt 2: High-Speed HD Fallback
                     if not generated_img:
                         try:
                             encoded_prompt = urllib.parse.quote(prompt)
@@ -193,11 +320,218 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
                         res_data = {"success": False, "message": "Failed to render image."}
                         status = 500
 
+            # 7. Send Administrative Notice / Warning (with 3-Strike Auto-Ban)
+            elif clean_path == '/api/admin/send-notice':
+                admin_key = req_data.get('key', '')
+                db = load_db()
+                valid, is_super, admin_name = authenticate_admin(admin_key, db)
+                if not valid:
+                    res_data = {"success": False, "message": "Unauthorized Admin Key"}
+                    status = 401
+                else:
+                    username = req_data.get('username', '').strip().lower()
+                    notice_text = req_data.get('noticeText', '').strip()
+
+                    user = db["users"].get(username)
+                    if not user:
+                        res_data = {"success": False, "message": "User not found"}
+                        status = 404
+                    elif not notice_text:
+                        res_data = {"success": False, "message": "Notice text is required"}
+                        status = 400
+                    else:
+                        if "warnings" not in user:
+                            user["warnings"] = []
+
+                        warn_obj = {
+                            "id": f"warn_{int(time.time()*1000)}",
+                            "text": notice_text,
+                            "sentBy": admin_name,
+                            "timestamp": time.time(),
+                            "acknowledged": False
+                        }
+                        user["warnings"].append(warn_obj)
+                        warn_count = len(user["warnings"])
+
+                        # AUTO-BAN ON 3 STRIKES
+                        auto_banned = False
+                        if warn_count >= 3:
+                            auto_banned = True
+                            until_time = time.time() + (30 * 24 * 3600) # 30 Days Ban on 3 Strikes
+                            user["status"] = "suspended"
+                            user["suspendedUntil"] = until_time
+                            user["banReason"] = f"Automatic System Ban: 3 strikes/notices exceeded ({notice_text})"
+                            user["bannedBy"] = f"Auto-Enforcement (3rd strike by {admin_name})"
+
+                        save_db(db)
+
+                        if auto_banned:
+                            msg = f"⚠️ Warning #{warn_count} sent to @{username}. 🚨 3-STRIKE REACHED: User has been AUTOMATICALLY SUSPENDED for 30 days!"
+                        else:
+                            msg = f"⚠️ Warning #{warn_count}/3 sent to @{username} successfully!"
+
+                        res_data = {
+                            "success": True, 
+                            "message": msg, 
+                            "warningCount": warn_count, 
+                            "autoBanned": auto_banned
+                        }
+                        status = 200
+
+            # 8. Ban / Suspend / Unban / Solid Delete Action
+            elif clean_path == '/api/admin/user-status':
+                admin_key = req_data.get('key', '')
+                db = load_db()
+                valid, is_super, admin_name = authenticate_admin(admin_key, db)
+                if not valid:
+                    res_data = {"success": False, "message": "Unauthorized Admin Key"}
+                    status = 401
+                else:
+                    username = req_data.get('username', '').strip().lower()
+                    action = req_data.get('action', '')
+                    duration_hours = float(req_data.get('durationHours', 0))
+                    reason = req_data.get('reason', 'Administrative action').strip()
+
+                    user = db["users"].get(username)
+                    if not user and action != 'delete':
+                        res_data = {"success": False, "message": "User not found"}
+                        status = 404
+                    else:
+                        if action == 'unban':
+                            user["status"] = "active"
+                            user["suspendedUntil"] = 0
+                            user["banReason"] = ""
+                            user["bannedBy"] = ""
+                            save_db(db)
+                            res_data = {"success": True, "message": f"@{username} UNBANNED by {admin_name}!"}
+                            status = 200
+
+                        elif action == 'ban':
+                            user["status"] = "banned"
+                            user["suspendedUntil"] = 0
+                            user["banReason"] = reason
+                            user["bannedBy"] = admin_name
+                            save_db(db)
+                            res_data = {"success": True, "message": f"@{username} PERMANENTLY BANNED by {admin_name}!"}
+                            status = 200
+
+                        elif action == 'suspend':
+                            until_timestamp = time.time() + (duration_hours * 3600)
+                            user["status"] = "suspended"
+                            user["suspendedUntil"] = until_timestamp
+                            user["banReason"] = reason
+                            user["bannedBy"] = admin_name
+                            save_db(db)
+                            time_str = time.strftime('%d %b %Y, %I:%M %p', time.localtime(until_timestamp))
+                            res_data = {"success": True, "message": f"@{username} SUSPENDED until {time_str} by {admin_name}!"}
+                            status = 200
+
+                        elif action == 'delete':
+                            # Permanent solid removal from database
+                            deleted = False
+                            if username in db["users"]:
+                                del db["users"][username]
+                                deleted = True
+                            if username in db["chats"]:
+                                del db["chats"][username]
+                                deleted = True
+                            save_db(db)
+                            res_data = {"success": True, "message": f"User @{username} and all chat records permanently deleted!"}
+                            status = 200
+                        else:
+                            res_data = {"success": False, "message": "Invalid action"}
+                            status = 400
+
+            # 9. Super Admin Change Master PIN
+            elif clean_path == '/api/admin/change-pin':
+                old_pin = req_data.get('oldPin', '').strip()
+                new_pin = req_data.get('newPin', '').strip()
+                db = load_db()
+                valid, is_super, admin_name = authenticate_admin(old_pin, db)
+
+                if not is_super:
+                    res_data = {"success": False, "message": "Current Super Admin PIN is incorrect!"}
+                    status = 403
+                elif not new_pin or len(new_pin) < 3:
+                    res_data = {"success": False, "message": "New PIN must be at least 3 characters long."}
+                    status = 400
+                else:
+                    db["superAdminPin"] = new_pin
+                    save_db(db)
+                    res_data = {"success": True, "message": "Super Admin PIN updated successfully!"}
+                    status = 200
+
+            # 10. Create Sub-Admin / Employee
+            elif clean_path == '/api/admin/create-employee':
+                admin_key = req_data.get('key', '')
+                db = load_db()
+                valid, is_super, admin_name = authenticate_admin(admin_key, db)
+                if not is_super:
+                    res_data = {"success": False, "message": "Only Super Admin (Shantanu Sharma) can create employees!"}
+                    status = 403
+                else:
+                    emp_username = req_data.get('username', '').strip().lower()
+                    emp_name = req_data.get('displayName', '').strip() or emp_username
+                    emp_password = req_data.get('password', '').strip()
+                    emp_role = req_data.get('role', 'Support Admin').strip()
+
+                    if not emp_username or not emp_password:
+                        res_data = {"success": False, "message": "Username and password required"}
+                        status = 400
+                    elif emp_username in db["admins"]:
+                        res_data = {"success": False, "message": "Admin username already exists"}
+                        status = 400
+                    else:
+                        db["admins"][emp_username] = {
+                            "username": emp_username,
+                            "displayName": emp_name,
+                            "password": emp_password,
+                            "role": emp_role,
+                            "status": "active",
+                            "createdBy": "Shantanu Sharma",
+                            "createdAt": time.time()
+                        }
+                        save_db(db)
+                        res_data = {"success": True, "message": f"Sub-Admin @{emp_username} created successfully!"}
+                        status = 200
+
+            # 11. Manage Sub-Admin / Employee (Ban / Delete)
+            elif clean_path == '/api/admin/employee-status':
+                admin_key = req_data.get('key', '')
+                db = load_db()
+                valid, is_super, admin_name = authenticate_admin(admin_key, db)
+                if not is_super:
+                    res_data = {"success": False, "message": "Only Super Admin (Shantanu Sharma) can manage employees!"}
+                    status = 403
+                else:
+                    emp_username = req_data.get('username', '').strip().lower()
+                    action = req_data.get('action', '')
+
+                    if emp_username not in db["admins"]:
+                        res_data = {"success": False, "message": "Employee admin not found"}
+                        status = 404
+                    else:
+                        if action == 'ban':
+                            db["admins"][emp_username]["status"] = "banned"
+                            save_db(db)
+                            res_data = {"success": True, "message": f"Admin @{emp_username} has been BANNED by Shantanu Sharma!"}
+                            status = 200
+                        elif action == 'unban':
+                            db["admins"][emp_username]["status"] = "active"
+                            save_db(db)
+                            res_data = {"success": True, "message": f"Admin @{emp_username} is now ACTIVE!"}
+                            status = 200
+                        elif action == 'delete':
+                            del db["admins"][emp_username]
+                            save_db(db)
+                            res_data = {"success": True, "message": f"Admin @{emp_username} DELETED!"}
+                            status = 200
+
             self.send_response(status)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
             self.send_header('Access-Control-Allow-Origin', '*')
             self.end_headers()
-            self.wfile.write(json.dumps(res_data).encode('utf-8'))
+            self.wfile.write(json.dumps(res_data, ensure_ascii=False).encode('utf-8'))
             return
 
         super().do_POST()
@@ -214,9 +548,10 @@ class ReusableTCPServer(socketserver.TCPServer):
 
 def run_server():
     print("=" * 60)
-    print("  * PRIME SYSTEM — Executive Cloud Server Initializing...")
+    print("  * PRIME SYSTEM — Executive Enterprise Cloud Server")
     print(f"  * Binding to 0.0.0.0 on Port: {PORT}")
-    print("  * Creator & Owner: Shantanu Sharma")
+    print("  * Supreme Super Admin: Shantanu Sharma")
+    print("  * 3-Strike Warning Notice & Multi-Admin Engine: ACTIVE")
     print("=" * 60)
     sys.stdout.flush()
 
