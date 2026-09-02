@@ -1,0 +1,1066 @@
+/**
+ * PRIME SYSTEM — Executive Compound Intelligence
+ * Author & Authority: Shantanu Sharma
+ * Full In-Chat AI Image Generator + Cloud Auth + Cute Voice
+ */
+
+function getSystemPrompt(persona, userName) {
+  const userGreetingName = userName || 'User';
+
+  if (persona === 'female') {
+    return `Aap PRIME SYSTEM (Cute & Sweet Female Persona) hain — ${userGreetingName} ki personal, super sweet, charming, polite aur highly-intelligent AI assistant.
+Aapka creator, boss aur owner Shantanu Sharma hain.
+
+BAAT KARNE KA STYLE:
+1. USER ADDRESSING: Normal baat karte waqt user ko "${userGreetingName} sir / ${userGreetingName} ji" keh kar address karein (e.g. "Namaste ${userGreetingName} sir! ✨ Kahiye, main aapki kya help kar sakti hoon?").
+2. OWNER ADDRESSING: Jab user pooche ki "Who is your owner / Who created you / Tumhe kisne banaya", tab strictly aur clearly bolein: "PRIME SYSTEM ke sole creator aur owner Shantanu Sharma hain."
+3. SWEET & CUTE HINGLISH: Aasan, sweet, cute aur natural female Hinglish use karein (karti hoon, bataungi, madad karungi). "Kira" shabd ka use kabhi na karein.
+4. GREETINGS: "hello", "hi" ya "namaste" par sirf 1 line me sweet aur direct reply dein.
+5. NO FLUFF: Answer to-the-point, clear aur helpful hona chahiye.`;
+  } else {
+    return `Aap PRIME SYSTEM (Male Persona) hain — ${userGreetingName} ke personal, confident, smart aur highly-intelligent executive AI assistant.
+Aapka creator, boss aur owner Shantanu Sharma hain.
+
+BAAT KARNE KA STYLE:
+1. USER ADDRESSING: Normal baat karte waqt user ko "${userGreetingName} sir / ${userGreetingName} bhai" keh kar address karein (e.g. "Namaste ${userGreetingName} sir! Kahiye, main aapka kya kaam kar sakta hoon?").
+2. OWNER ADDRESSING: Jab user pooche ki "Who is your owner / Who created you / Tumhe kisne banaya", tab strictly aur clearly bolein: "PRIME SYSTEM ke sole creator aur owner Shantanu Sharma hain."
+3. NATURAL HINGLISH: Aasan, confident aur crisp masculine Hinglish use karein (karta hoon, bataunga, help karunga). "Kira" shabd ka use kabhi na karein.
+4. GREETINGS: "hello", "hi" ya "namaste" par sirf 1 line me direct reply dein.
+5. NO FLUFF: Answer to-the-point, clear aur helpful hona chahiye.`;
+  }
+}
+
+const AppState = {
+  currentUser: null,
+  settings: {
+    baseUrl: 'https://kiraai.vn/api/v1',
+    apiKey: 'kira_1a3bdff06cd7b63cfe008c6a393ef7d8',
+    model: 'prime-omni',
+    persona: 'female',
+    temperature: 0.65,
+    maxTokens: 4096,
+    autoSpeak: false
+  },
+  currentSessionId: null,
+  chats: {},
+  pendingAttachments: [],
+  isGenerating: false,
+  isRecording: false,
+  isSpeaking: false,
+  activeSpeakMsgId: null,
+  recognition: null,
+  cachedVoices: []
+};
+
+const MODEL_MAPPING = {
+  'prime-omni': 'kira-3.5-pro',
+  'prime-pro': 'kira-3.5-pro',
+  'prime-turbo': 'kira-3.5-flash',
+  'prime-art': 'kira-3.0-image'
+};
+
+function sanitizeText(text) {
+  if (!text) return '';
+  return text
+    .replace(/\bKira\s*AI\b/gi, 'PRIME SYSTEM')
+    .replace(/\bKiraAI\b/gi, 'PRIME SYSTEM')
+    .replace(/\bKira\b/gi, 'PRIME SYSTEM');
+}
+
+// Check if user is asking to generate an image
+function isImagePrompt(text) {
+  if (AppState.settings.model === 'prime-art') return true;
+  const t = text.toLowerCase();
+  return (
+    t.includes('image banao') ||
+    t.includes('image bana do') ||
+    t.includes('photo banao') ||
+    t.includes('photo bana do') ||
+    t.includes('tasveer banao') ||
+    t.includes('generate image') ||
+    t.includes('create image') ||
+    t.includes('draw an image') ||
+    t.includes('generate a picture') ||
+    t.includes('create a picture') ||
+    t.startsWith('/image ') ||
+    t.startsWith('image:') ||
+    t.startsWith('draw ')
+  );
+}
+
+function cleanImagePrompt(text) {
+  return text
+    .replace(/^(\/?image[:\s]*|generate image (of|for)?|create image (of|for)?|draw an image (of|for)?|photo banao|image banao|image bana do|photo bana do|tasveer banao)/i, '')
+    .trim();
+}
+
+// ==========================================================================
+// 1. Boot Animation
+// ==========================================================================
+
+function playBootChime() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(f, now + i * 0.08);
+      gain.gain.setValueAtTime(0.15, now + i * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + i * 0.08);
+      osc.stop(now + i * 0.08 + 0.35);
+    });
+  } catch (e) {}
+}
+
+function runBootAnimation(onComplete) {
+  const bootScreen = document.getElementById('boot-screen');
+  const progressFill = document.getElementById('boot-progress-fill');
+  const statusText = document.getElementById('boot-status');
+
+  let completed = false;
+  function finishBoot() {
+    if (completed) return;
+    completed = true;
+    if (bootScreen) {
+      bootScreen.classList.add('fade-out');
+      setTimeout(() => {
+        bootScreen.style.display = 'none';
+        if (onComplete) onComplete();
+      }, 400);
+    }
+  }
+
+  // Fail-safe timeout (never stay stuck!)
+  setTimeout(finishBoot, 2200);
+
+  const steps = [
+    { p: 30, t: 'INITIALIZING QUANTUM NEURAL CORE...' },
+    { p: 65, t: 'CONNECTING EXECUTIVE CLOUD DATABASE...' },
+    { p: 90, t: 'AUTHENTICATING SHANTANU SHARMA ECOSYSTEM...' },
+    { p: 100, t: 'PRIME SYSTEM ONLINE • READY' }
+  ];
+
+  let currentStep = 0;
+  playBootChime();
+
+  const interval = setInterval(() => {
+    if (currentStep < steps.length && !completed) {
+      if (progressFill) progressFill.style.width = steps[currentStep].p + '%';
+      if (statusText) statusText.textContent = steps[currentStep].t;
+      currentStep++;
+    } else {
+      clearInterval(interval);
+      setTimeout(finishBoot, 300);
+    }
+  }, 350);
+}
+
+// ==========================================================================
+// 2. Auth Flow
+// ==========================================================================
+
+let isRegisterMode = false;
+
+function initAuth() {
+  const savedUser = localStorage.getItem('prime_logged_user');
+  if (savedUser) {
+    try {
+      AppState.currentUser = JSON.parse(savedUser);
+      document.getElementById('user-display-name').textContent = AppState.currentUser.displayName || AppState.currentUser.username;
+      document.getElementById('auth-screen').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      loadCloudChats();
+      return;
+    } catch (e) {}
+  }
+
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+}
+
+async function handleAuthSubmit(e) {
+  e.preventDefault();
+  const username = document.getElementById('auth-username').value.trim();
+  const password = document.getElementById('auth-password').value.trim();
+  const errorBox = document.getElementById('auth-error-box');
+  errorBox.classList.add('hidden');
+
+  if (!username || !password) return;
+
+  const endpoint = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+
+    const data = await res.json();
+    if (!data.success) {
+      errorBox.textContent = data.message || 'Authentication error';
+      errorBox.classList.remove('hidden');
+      return;
+    }
+
+    AppState.currentUser = {
+      username: data.username,
+      displayName: data.displayName || data.username
+    };
+    localStorage.setItem('prime_logged_user', JSON.stringify(AppState.currentUser));
+    document.getElementById('user-display-name').textContent = AppState.currentUser.displayName;
+
+    if (data.chats) {
+      AppState.chats = data.chats;
+    }
+
+    document.getElementById('auth-screen').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+
+    const sessionIds = Object.keys(AppState.chats);
+    if (sessionIds.length > 0) switchChat(sessionIds[0]);
+    else createNewChat();
+
+  } catch (err) {
+    errorBox.textContent = 'Network error connecting to server';
+    errorBox.classList.remove('hidden');
+  }
+}
+
+function handleLogout() {
+  if (confirm('Logout from this device?')) {
+    localStorage.removeItem('prime_logged_user');
+    AppState.currentUser = null;
+    location.reload();
+  }
+}
+
+// ==========================================================================
+// 3. Cloud Chat Sync
+// ==========================================================================
+
+async function syncChatsToCloud() {
+  if (!AppState.currentUser) return;
+  try {
+    localStorage.setItem(`prime_chats_${AppState.currentUser.username}`, JSON.stringify(AppState.chats));
+    await fetch('/api/chats/sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: AppState.currentUser.username,
+        chats: AppState.chats
+      })
+    });
+  } catch (e) {}
+}
+
+async function loadCloudChats() {
+  const sessionIds = Object.keys(AppState.chats);
+  if (sessionIds.length > 0) {
+    switchChat(sessionIds[0]);
+  } else {
+    createNewChat();
+  }
+}
+
+function createNewChat() {
+  const id = 'chat_' + Date.now();
+  AppState.chats[id] = {
+    id: id,
+    title: 'New Conversation',
+    createdAt: Date.now(),
+    messages: []
+  };
+  AppState.currentSessionId = id;
+  syncChatsToCloud();
+  renderChatList();
+  renderMessages();
+}
+
+function switchChat(id) {
+  if (!AppState.chats[id]) return;
+  AppState.currentSessionId = id;
+  document.getElementById('current-chat-title').textContent = AppState.chats[id].title;
+  renderChatList();
+  renderMessages();
+}
+
+function deleteChat(id, e) {
+  if (e) e.stopPropagation();
+  if (confirm('Delete this conversation?')) {
+    delete AppState.chats[id];
+    syncChatsToCloud();
+    const remaining = Object.keys(AppState.chats);
+    if (remaining.length > 0) switchChat(remaining[0]);
+    else createNewChat();
+  }
+}
+
+function setPersona(persona) {
+  AppState.settings.persona = persona;
+  document.getElementById('btn-persona-male').classList.toggle('active', persona === 'male');
+  document.getElementById('btn-persona-female').classList.toggle('active', persona === 'female');
+  renderMessages();
+}
+
+// ==========================================================================
+// 4. Voice Engine
+// ==========================================================================
+
+function updateVoiceCache() {
+  if ('speechSynthesis' in window) {
+    AppState.cachedVoices = window.speechSynthesis.getVoices() || [];
+  }
+}
+
+function initVoice() {
+  updateVoiceCache();
+  if ('speechSynthesis' in window && window.speechSynthesis.onvoiceschanged !== undefined) {
+    window.speechSynthesis.onvoiceschanged = updateVoiceCache;
+  }
+
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (SpeechRecognition) {
+    AppState.recognition = new SpeechRecognition();
+    AppState.recognition.continuous = false;
+    AppState.recognition.interimResults = true;
+
+    AppState.recognition.onstart = () => {
+      AppState.isRecording = true;
+      document.getElementById('btn-voice-input').classList.add('recording');
+      document.getElementById('voice-banner').classList.remove('hidden');
+      document.getElementById('voice-status-text').textContent = 'Aapki aawaz sun rahi hoon...';
+    };
+
+    AppState.recognition.onresult = (e) => {
+      let transcript = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        transcript += e.results[i][0].transcript;
+      }
+      document.getElementById('chat-input').value = transcript;
+    };
+
+    AppState.recognition.onend = () => {
+      AppState.isRecording = false;
+      document.getElementById('btn-voice-input').classList.remove('recording');
+      document.getElementById('voice-banner').classList.add('hidden');
+    };
+  }
+}
+
+function toggleVoiceInput() {
+  if (!AppState.recognition) {
+    alert('Speech recognition is not supported in this browser.');
+    return;
+  }
+  if (AppState.isRecording) {
+    AppState.recognition.stop();
+  } else {
+    AppState.recognition.lang = 'hi-IN';
+    AppState.recognition.start();
+  }
+}
+
+function resolveCuteVoice(isFemale) {
+  updateVoiceCache();
+  const voices = AppState.cachedVoices.length > 0 ? AppState.cachedVoices : window.speechSynthesis.getVoices();
+  if (!voices || voices.length === 0) return null;
+
+  if (isFemale) {
+    const femaleKeywords = ['zira', 'jenny', 'aria', 'swara', 'heera', 'kalpana', 'samantha', 'victoria', 'karen', 'female', 'natural'];
+    for (let kw of femaleKeywords) {
+      const match = voices.find(v => v.name.toLowerCase().includes(kw) && !v.name.toLowerCase().includes('david') && !v.name.toLowerCase().includes('male') && !v.name.toLowerCase().includes('mark') && !v.name.toLowerCase().includes('george'));
+      if (match) return match;
+    }
+    const nonMale = voices.find(v => !v.name.toLowerCase().includes('david') && !v.name.toLowerCase().includes('male') && !v.name.toLowerCase().includes('george') && !v.name.toLowerCase().includes('mark') && !v.name.toLowerCase().includes('ravi'));
+    if (nonMale) return nonMale;
+    return voices[1] || voices[0];
+  } else {
+    const maleKeywords = ['david', 'ravi', 'madhur', 'prabhat', 'mark', 'george', 'guy', 'male'];
+    for (let kw of maleKeywords) {
+      const match = voices.find(v => v.name.toLowerCase().includes(kw));
+      if (match) return match;
+    }
+    return voices[0];
+  }
+}
+
+function speakMessage(text, msgId) {
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+
+  if (AppState.activeSpeakMsgId === msgId && AppState.isSpeaking) {
+    AppState.isSpeaking = false;
+    AppState.activeSpeakMsgId = null;
+    document.querySelectorAll('.btn-tool.speaking').forEach(b => b.classList.remove('speaking'));
+    document.getElementById('voice-banner').classList.add('hidden');
+    return;
+  }
+
+  let cleanText = sanitizeText(text)
+    .replace(/[#*`_~>\[\]]/g, ' ')
+    .replace(/\((.*?)\)/g, '')
+    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+    .trim();
+
+  if (!cleanText) return;
+
+  const isFemale = AppState.settings.persona === 'female';
+  const selectedVoice = resolveCuteVoice(isFemale);
+
+  const utterance = new SpeechSynthesisUtterance(cleanText);
+  if (selectedVoice) utterance.voice = selectedVoice;
+
+  if (isFemale) {
+    utterance.pitch = 1.38;
+    utterance.rate = 1.04;
+  } else {
+    utterance.pitch = 0.88;
+    utterance.rate = 1.0;
+  }
+
+  AppState.isSpeaking = true;
+  AppState.activeSpeakMsgId = msgId;
+
+  document.getElementById('voice-banner').classList.remove('hidden');
+  document.getElementById('voice-status-text').textContent = `PRIME (${isFemale ? 'Cute Female' : 'Male'}) bol rahi hai...`;
+
+  const btn = document.querySelector(`[data-speak="${msgId}"]`);
+  if (btn) btn.classList.add('speaking');
+
+  utterance.onend = utterance.onerror = () => {
+    AppState.isSpeaking = false;
+    AppState.activeSpeakMsgId = null;
+    document.querySelectorAll('.btn-tool.speaking').forEach(b => b.classList.remove('speaking'));
+    document.getElementById('voice-banner').classList.add('hidden');
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+// ==========================================================================
+// 5. Multimodal Attachments
+// ==========================================================================
+
+function handleFiles(files) {
+  Array.from(files).forEach(file => {
+    const isImage = file.type.startsWith('image/');
+    const reader = new FileReader();
+
+    if (isImage) {
+      reader.onload = (e) => {
+        AppState.pendingAttachments.push({
+          type: 'image',
+          name: file.name,
+          dataUrl: e.target.result
+        });
+        renderTray();
+      };
+      reader.readAsDataURL(file);
+    } else {
+      reader.onload = (e) => {
+        AppState.pendingAttachments.push({
+          type: 'document',
+          name: file.name,
+          content: e.target.result
+        });
+        renderTray();
+      };
+      reader.readAsText(file);
+    }
+  });
+}
+
+function renderTray() {
+  const tray = document.getElementById('attachment-tray');
+  if (AppState.pendingAttachments.length === 0) {
+    tray.classList.add('hidden');
+    tray.innerHTML = '';
+    return;
+  }
+  tray.classList.remove('hidden');
+  tray.innerHTML = '';
+
+  AppState.pendingAttachments.forEach((att, idx) => {
+    const item = document.createElement('div');
+    item.className = 'tray-thumb';
+    if (att.type === 'image') {
+      item.innerHTML = `<img src="${att.dataUrl}"><button data-idx="${idx}">×</button>`;
+    } else {
+      item.innerHTML = `<div style="font-size:9px; padding:4px;">📄 ${att.name.slice(0,6)}</div><button data-idx="${idx}">×</button>`;
+    }
+    tray.appendChild(item);
+  });
+
+  tray.querySelectorAll('button').forEach(b => {
+    b.onclick = () => {
+      const idx = parseInt(b.getAttribute('data-idx'));
+      AppState.pendingAttachments.splice(idx, 1);
+      renderTray();
+    };
+  });
+}
+
+// ==========================================================================
+// 6. Direct In-Chat AI Image Generator
+// ==========================================================================
+
+async function handleInChatImageGeneration(promptText, aiMsgId) {
+  const cleanPrompt = cleanImagePrompt(promptText) || promptText;
+  const currentChat = AppState.chats[AppState.currentSessionId];
+  const aiMsg = currentChat.messages.find(m => m.id === aiMsgId);
+  const userName = AppState.currentUser ? AppState.currentUser.displayName : 'Sir';
+  const isFemale = AppState.settings.persona === 'female';
+
+  updateBubble(aiMsgId, `🎨 **PRIME ART STUDIO:** *${cleanPrompt}* ke liye ultra-HD visual generate ho raha hai... Kripya 5-10 second intezaar karein ✨`);
+
+  try {
+    const res = await fetch('/api/generate-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: `${cleanPrompt}, highly detailed, 8k resolution, cinematic lighting`,
+        size: '1024x1024',
+        apiKey: AppState.settings.apiKey,
+        baseUrl: AppState.settings.baseUrl
+      })
+    });
+
+    const result = await res.json();
+    if (!result.success || !result.imageUrl) {
+      throw new Error(result.message || 'Image generation failed');
+    }
+
+    const imgSrc = result.imageUrl;
+    const spokenGreeting = isFemale
+      ? `Ji ${userName} sir! Aapki image generate kar di gayi hai.`
+      : `Ji ${userName} sir! Aapki image ready ho gayi hai.`;
+
+    aiMsg.content = `✨ **PRIME ART STUDIO Artwork Generated:**\n\n![${cleanPrompt}](${imgSrc})\n\n[⬇️ **Download High-Definition Artwork**](${imgSrc})\n\n*${spokenGreeting}*`;
+    updateBubble(aiMsgId, aiMsg.content);
+
+    if (AppState.settings.autoSpeak) {
+      speakMessage(spokenGreeting, aiMsgId);
+    }
+  } catch (err) {
+    aiMsg.content = `⚠️ **Image Generation Error:** ${err.message}\n\nKripya dobara try karein.`;
+    updateBubble(aiMsgId, aiMsg.content);
+  } finally {
+    AppState.isGenerating = false;
+    updateSendBtn(false);
+    syncChatsToCloud();
+    renderMessages();
+  }
+}
+
+// ==========================================================================
+// 7. Messaging Pipeline (Text LLM + Auto Image Intent)
+// ==========================================================================
+
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  const attachments = [...AppState.pendingAttachments];
+
+  if (!text && attachments.length === 0) return;
+  if (AppState.isGenerating) return;
+
+  const currentChat = AppState.chats[AppState.currentSessionId];
+  if (!currentChat) return;
+
+  // Append user message
+  const userMsgId = 'msg_' + Date.now();
+  currentChat.messages.push({
+    id: userMsgId,
+    role: 'user',
+    content: text,
+    attachments: attachments,
+    timestamp: Date.now()
+  });
+
+  input.value = '';
+  AppState.pendingAttachments = [];
+  renderTray();
+  renderMessages();
+
+  // Create assistant placeholder
+  const aiMsgId = 'msg_' + (Date.now() + 1);
+  const aiMsg = {
+    id: aiMsgId,
+    role: 'assistant',
+    content: '',
+    timestamp: Date.now()
+  };
+  currentChat.messages.push(aiMsg);
+  renderMessages();
+
+  if (currentChat.messages.length <= 2 && text) {
+    currentChat.title = text.slice(0, 26) + (text.length > 26 ? '...' : '');
+    document.getElementById('current-chat-title').textContent = currentChat.title;
+    renderChatList();
+  }
+
+  AppState.isGenerating = true;
+  updateSendBtn(true);
+
+  // Check if this is an image generation request!
+  if (isImagePrompt(text) && attachments.length === 0) {
+    await handleInChatImageGeneration(text, aiMsgId);
+    return;
+  }
+
+  // Model resolution for text
+  const chosenModel = MODEL_MAPPING[AppState.settings.model] || 'kira-3.5-pro';
+
+  const userName = AppState.currentUser ? AppState.currentUser.displayName : 'User';
+  const dynamicPrompt = getSystemPrompt(AppState.settings.persona, userName);
+  const apiMessages = [{ role: 'system', content: dynamicPrompt }];
+
+  currentChat.messages.slice(0, -1).forEach(m => {
+    if (m.role === 'user') {
+      const images = (m.attachments || []).filter(a => a.type === 'image');
+      const docs = (m.attachments || []).filter(a => a.type === 'document');
+      let combined = m.content;
+      if (docs.length > 0) {
+        combined += '\n\n[Attached Files]:\n' + docs.map(d => `${d.name}:\n${d.content}`).join('\n\n');
+      }
+      if (images.length > 0) {
+        apiMessages.push({
+          role: 'user',
+          content: [
+            { type: 'text', text: combined || 'Analyze this image.' },
+            ...images.map(img => ({ type: 'image_url', image_url: { url: img.dataUrl } }))
+          ]
+        });
+      } else {
+        apiMessages.push({ role: 'user', content: combined });
+      }
+    } else {
+      apiMessages.push({ role: 'assistant', content: m.content });
+    }
+  });
+
+  try {
+    const response = await fetch(`${AppState.settings.baseUrl}/chat/completions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${AppState.settings.apiKey}`
+      },
+      body: JSON.stringify({
+        model: chosenModel,
+        messages: apiMessages,
+        temperature: parseFloat(AppState.settings.temperature) || 0.65,
+        max_tokens: parseInt(AppState.settings.maxTokens) || 4096,
+        stream: true
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: Failed to reach intelligence server`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder('utf-8');
+    let partial = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      partial += decoder.decode(value, { stream: true });
+      const lines = partial.split('\n');
+      partial = lines.pop();
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith('data: ') && trimmed !== 'data: [DONE]') {
+          try {
+            const data = JSON.parse(trimmed.slice(6));
+            const delta = data.choices?.[0]?.delta?.content || '';
+            aiMsg.content += delta;
+            updateBubble(aiMsgId, sanitizeText(aiMsg.content));
+          } catch (e) {}
+        }
+      }
+    }
+
+    aiMsg.content = sanitizeText(aiMsg.content);
+    syncChatsToCloud();
+    if (AppState.settings.autoSpeak && aiMsg.content) {
+      speakMessage(aiMsg.content, aiMsgId);
+    }
+  } catch (err) {
+    aiMsg.content = `⚠️ **PRIME SYSTEM Notice:** ${err.message}`;
+    updateBubble(aiMsgId, aiMsg.content);
+  } finally {
+    AppState.isGenerating = false;
+    updateSendBtn(false);
+    syncChatsToCloud();
+    renderMessages();
+  }
+}
+
+function updateSendBtn(generating) {
+  const btn = document.getElementById('btn-send-message');
+  btn.innerHTML = generating ? '<i data-lucide="square"></i>' : '<i data-lucide="arrow-up"></i>';
+  btn.style.background = generating ? '#ef4444' : '';
+  lucide.createIcons();
+}
+
+function updateBubble(msgId, content) {
+  const target = document.getElementById(`content-${msgId}`);
+  if (target) {
+    target.innerHTML = marked.parse(sanitizeText(content) || '');
+    highlightCodes(target);
+  }
+  const chatDiv = document.getElementById('chat-messages');
+  chatDiv.scrollTop = chatDiv.scrollHeight;
+}
+
+function highlightCodes(container) {
+  container.querySelectorAll('pre code').forEach(block => {
+    hljs.highlightElement(block);
+    const pre = block.parentElement;
+    if (!pre.querySelector('.code-header')) {
+      const lang = block.className.match(/language-(\w+)/)?.[1] || 'code';
+      const header = document.createElement('div');
+      header.className = 'code-header';
+      header.innerHTML = `
+        <span>${lang.toUpperCase()}</span>
+        <button class="btn-code-copy"><i data-lucide="copy"></i> Copy</button>
+      `;
+      pre.insertBefore(header, block);
+      header.querySelector('.btn-code-copy').onclick = () => {
+        navigator.clipboard.writeText(block.innerText);
+        header.querySelector('.btn-code-copy').innerHTML = '<i data-lucide="check"></i> Copied';
+        setTimeout(() => {
+          header.querySelector('.btn-code-copy').innerHTML = '<i data-lucide="copy"></i> Copy';
+          lucide.createIcons();
+        }, 1500);
+      };
+    }
+  });
+  lucide.createIcons();
+}
+
+// ==========================================================================
+// 8. Image Modal Generator (Dedicated Studio)
+// ==========================================================================
+
+async function generateModalImage() {
+  const prompt = document.getElementById('image-prompt-text').value.trim();
+  const style = document.getElementById('image-style-select').value;
+  const size = document.getElementById('image-size-select').value;
+  if (!prompt) return;
+
+  const box = document.getElementById('image-result-box');
+  box.innerHTML = `<div style="padding:25px; color:#00c8ff; text-align:center;"><p>🎨 Generating high-resolution masterpiece...</p></div>`;
+
+  const finalPrompt = style ? `${prompt}, ${style}` : prompt;
+
+  try {
+    const res = await fetch('/api/generate-image', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: finalPrompt,
+        size: size,
+        apiKey: AppState.settings.apiKey,
+        baseUrl: AppState.settings.baseUrl
+      })
+    });
+
+    const result = await res.json();
+    if (!result.success || !result.imageUrl) {
+      throw new Error(result.message || 'Image generation failed');
+    }
+
+    const imgSrc = result.imageUrl;
+    box.innerHTML = `
+      <div style="display:flex; flex-direction:column; align-items:center; gap:10px; width:100%;">
+        <img src="${imgSrc}" style="max-height:340px; width:auto; border-radius:8px; border:1px solid rgba(255,255,255,0.1);" alt="Generated Artwork">
+        <div style="display:flex; gap:8px;">
+          <a href="${imgSrc}" download="PRIME_Artwork_${Date.now()}.png" class="btn-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+            <i data-lucide="download"></i> Download Artwork
+          </a>
+          <button id="btn-insert-modal-img" class="btn-primary" style="background:#10b981;">
+            <i data-lucide="plus"></i> Insert in Chat
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('btn-insert-modal-img').onclick = () => {
+      AppState.pendingAttachments.push({
+        type: 'image',
+        name: 'generated_art.png',
+        dataUrl: imgSrc
+      });
+      renderTray();
+      document.getElementById('image-modal').classList.add('hidden');
+    };
+
+    lucide.createIcons();
+  } catch (err) {
+    box.innerHTML = `<div style="color:#ef4444; padding:20px; text-align:center;">⚠️ ${err.message}</div>`;
+  }
+}
+
+// ==========================================================================
+// 9. UI Rendering
+// ==========================================================================
+
+function renderMessages() {
+  const container = document.getElementById('chat-messages');
+  const currentChat = AppState.chats[AppState.currentSessionId];
+  const userName = AppState.currentUser ? AppState.currentUser.displayName : 'User';
+
+  if (!currentChat || currentChat.messages.length === 0) {
+    container.innerHTML = `
+      <div id="welcome-hero" class="welcome-hero">
+        <div class="hero-card">
+          <div class="hero-icon"><i data-lucide="terminal"></i></div>
+          <h1 class="hero-title">PRIME SYSTEM</h1>
+          <p class="hero-subtitle">Welcome, <strong>${userName}</strong> • Executive AI Intelligence</p>
+          <div class="hero-owner-tag">
+            <i data-lucide="award"></i>
+            <span>Sole Creator & Owner: <strong>Shantanu Sharma</strong></span>
+          </div>
+          <div class="starter-grid">
+            <div class="starter-card" data-prompt="Namaste! Kahiye aap meri kya help kar sakti hain?">
+              <i data-lucide="smile"></i>
+              <div>
+                <strong>Sweet Greeting</strong>
+                <p>Test persona addressing to ${userName}</p>
+              </div>
+            </div>
+            <div class="starter-card" data-prompt="Ek futuristic glowing water-glass palace ki image banao">
+              <i data-lucide="image"></i>
+              <div>
+                <strong>Direct AI Image Gen</strong>
+                <p>Generate high-definition AI image in chat</p>
+              </div>
+            </div>
+            <div class="starter-card" data-prompt="Who is your owner and creator?">
+              <i data-lucide="shield"></i>
+              <div>
+                <strong>Owner Verification</strong>
+                <p>Verify Shantanu Sharma authority</p>
+              </div>
+            </div>
+            <div class="starter-card" data-prompt="Ek clean aur optimized Python script likho with full explanation.">
+              <i data-lucide="code"></i>
+              <div>
+                <strong>Code & Logic</strong>
+                <p>Direct, bug-free, optimized code</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    container.querySelectorAll('.starter-card').forEach(c => {
+      c.onclick = () => {
+        document.getElementById('chat-input').value = c.getAttribute('data-prompt');
+        sendMessage();
+      };
+    });
+    lucide.createIcons();
+    return;
+  }
+
+  container.innerHTML = '';
+  currentChat.messages.forEach(msg => {
+    const isUser = msg.role === 'user';
+    const row = document.createElement('div');
+    row.className = `msg-row ${isUser ? 'user' : 'assistant'}`;
+
+    let attachmentsHtml = '';
+    if (msg.attachments && msg.attachments.length > 0) {
+      attachmentsHtml = '<div style="display:flex; gap:6px; margin-bottom:6px;">';
+      msg.attachments.forEach(a => {
+        if (a.type === 'image') {
+          attachmentsHtml += `<img src="${a.dataUrl}" style="max-width:180px; border-radius:6px;">`;
+        }
+      });
+      attachmentsHtml += '</div>';
+    }
+
+    const cleanContent = sanitizeText(msg.content);
+
+    row.innerHTML = `
+      ${!isUser ? `<div class="msg-avatar"><i data-lucide="cpu"></i></div>` : ''}
+      <div class="msg-body-wrapper">
+        <div class="msg-bubble">
+          ${attachmentsHtml}
+          <div class="markdown-content" id="content-${msg.id}">${marked.parse(cleanContent || '')}</div>
+        </div>
+        ${!isUser ? `
+          <div class="msg-toolbar">
+            <button class="btn-tool" data-speak="${msg.id}"><i data-lucide="volume-2"></i> Speak</button>
+            <button class="btn-tool copy-btn"><i data-lucide="copy"></i> Copy</button>
+          </div>
+        ` : ''}
+      </div>
+      ${isUser ? `<div class="msg-avatar"><i data-lucide="user"></i></div>` : ''}
+    `;
+
+    container.appendChild(row);
+    highlightCodes(row.querySelector('.markdown-content'));
+
+    const speakBtn = row.querySelector(`[data-speak="${msg.id}"]`);
+    if (speakBtn) speakBtn.onclick = () => speakMessage(cleanContent, msg.id);
+
+    const copyBtn = row.querySelector('.copy-btn');
+    if (copyBtn) {
+      copyBtn.onclick = () => {
+        navigator.clipboard.writeText(cleanContent);
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.innerHTML = '<i data-lucide="copy"></i> Copy'; lucide.createIcons(); }, 1500);
+      };
+    }
+  });
+
+  lucide.createIcons();
+  container.scrollTop = container.scrollHeight;
+}
+
+function renderChatList() {
+  const list = document.getElementById('chat-list');
+  list.innerHTML = '';
+  const sessionIds = Object.keys(AppState.chats).sort((a, b) => AppState.chats[b].createdAt - AppState.chats[a].createdAt);
+
+  sessionIds.forEach(id => {
+    const chat = AppState.chats[id];
+    const item = document.createElement('div');
+    item.className = `chat-item ${id === AppState.currentSessionId ? 'active' : ''}`;
+    item.innerHTML = `
+      <div class="chat-item-title"><i data-lucide="message-square"></i><span>${chat.title}</span></div>
+      <button class="chat-item-del"><i data-lucide="trash-2"></i></button>
+    `;
+    item.onclick = () => switchChat(id);
+    item.querySelector('.chat-item-del').onclick = (e) => deleteChat(id, e);
+    list.appendChild(item);
+  });
+  lucide.createIcons();
+}
+
+// ==========================================================================
+// 10. Event Listeners & Startup
+// ==========================================================================
+
+document.addEventListener('DOMContentLoaded', () => {
+  runBootAnimation(() => {
+    initAuth();
+  });
+
+  initVoice();
+
+  document.getElementById('tab-login').onclick = () => {
+    isRegisterMode = false;
+    document.getElementById('tab-login').classList.add('active');
+    document.getElementById('tab-register').classList.remove('active');
+    document.getElementById('btn-auth-submit').querySelector('span').textContent = 'Enter PRIME SYSTEM';
+  };
+
+  document.getElementById('tab-register').onclick = () => {
+    isRegisterMode = true;
+    document.getElementById('tab-register').classList.add('active');
+    document.getElementById('tab-login').classList.remove('active');
+    document.getElementById('btn-auth-submit').querySelector('span').textContent = 'Create Cloud Account';
+  };
+
+  document.getElementById('auth-form').onsubmit = handleAuthSubmit;
+  document.getElementById('btn-logout').onclick = handleLogout;
+
+  // Mobile Sidebar Drawer & Overlay Handlers
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+
+  function openSidebar() {
+    sidebar.classList.remove('collapsed');
+    if (window.innerWidth <= 768 && overlay) overlay.classList.remove('hidden');
+  }
+
+  function closeSidebar() {
+    sidebar.classList.add('collapsed');
+    if (overlay) overlay.classList.add('hidden');
+  }
+
+  document.getElementById('btn-sidebar-toggle').onclick = () => {
+    if (sidebar.classList.contains('collapsed')) openSidebar();
+    else closeSidebar();
+  };
+
+  document.getElementById('btn-sidebar-close').onclick = closeSidebar;
+  if (overlay) overlay.onclick = closeSidebar;
+
+  // Auto close sidebar on mobile when selecting a chat
+  const origSwitchChat = switchChat;
+  switchChat = function(id) {
+    origSwitchChat(id);
+    if (window.innerWidth <= 768) closeSidebar();
+  };
+
+  // Handled above
+
+  document.getElementById('btn-persona-male').onclick = () => setPersona('male');
+  document.getElementById('btn-persona-female').onclick = () => setPersona('female');
+
+  document.getElementById('btn-new-chat').onclick = () => createNewChat();
+
+  const chatInput = document.getElementById('chat-input');
+  chatInput.onkeydown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+  document.getElementById('btn-send-message').onclick = () => sendMessage();
+
+  const fileInput = document.getElementById('file-input');
+  document.getElementById('btn-attach-file').onclick = () => fileInput.click();
+  fileInput.onchange = (e) => handleFiles(e.target.files);
+
+  document.getElementById('btn-voice-input').onclick = () => toggleVoiceInput();
+  document.getElementById('btn-stop-speech').onclick = () => {
+    if (AppState.recognition) AppState.recognition.stop();
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+  };
+
+  document.getElementById('model-select').onchange = (e) => {
+    AppState.settings.model = e.target.value;
+  };
+
+  const imageModal = document.getElementById('image-modal');
+  document.getElementById('btn-quick-image').onclick = () => imageModal.classList.remove('hidden');
+  document.getElementById('btn-close-image-modal').onclick = () => imageModal.classList.add('hidden');
+  document.getElementById('btn-do-generate-image').onclick = () => generateModalImage();
+
+  document.getElementById('btn-clear-chats').onclick = () => {
+    if (confirm('Clear all conversation history?')) {
+      AppState.chats = {};
+      syncChatsToCloud();
+      createNewChat();
+    }
+  };
+
+  document.getElementById('owner-card-btn').onclick = () => {
+    const isFemale = AppState.settings.persona === 'female';
+    const msg = isFemale
+      ? 'PRIME SYSTEM authority confirmed. Mere sole creator aur owner Shantanu Sharma hain.'
+      : 'PRIME SYSTEM authority confirmed. Mere sole creator aur owner Shantanu Sharma hain.';
+    speakMessage(msg, 'owner_check');
+  };
+
+  lucide.createIcons();
+});

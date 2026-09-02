@@ -1,0 +1,102 @@
+{
+  "users": {
+    "shantanu_boss": {
+      "username": "shantanu_boss",
+      "displayName": "shantanu_boss",
+      "password": "a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3",
+      "createdAt": 1788348471.96587
+    },
+    "shantanu": {
+      "username": "shantanu",
+      "displayName": "shantanu",
+      "password": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5",
+      "createdAt": 1788353685.2734244
+    },
+    "rahul": {
+      "username": "rahul",
+      "displayName": "rahul",
+      "password": "91a73fd806ab2c005c13b4dc19130a884e909dea3f72d46e30266fe1a1f588d8",
+      "createdAt": 1788353685.2734244
+    }
+  },
+  "chats": {
+    "shantanu_boss": {
+      "chat_1788353849215": {
+        "id": "chat_1788353849215",
+        "title": "New Conversation",
+        "createdAt": 1788353849215,
+        "messages": []
+      }
+    },
+    "shantanu": {
+      "chat_1788354103293": {
+        "id": "chat_1788354103293",
+        "title": "hello",
+        "createdAt": 1788354103293,
+        "messages": [
+          {
+            "id": "msg_1788354110398",
+            "role": "user",
+            "content": "hello",
+            "attachments": [],
+            "timestamp": 1788354110398
+          },
+          {
+            "id": "msg_1788354110421",
+            "role": "assistant",
+            "content": "Namaste shantanu sir! ✨ Kahiye, aaj main aapki kya madad kar sakti hoon?",
+            "timestamp": 1788354110420
+          },
+          {
+            "id": "msg_1788354146644",
+            "role": "user",
+            "content": "create a html code for calculator",
+            "attachments": [],
+            "timestamp": 1788354146644
+          },
+          {
+            "id": "msg_1788354146666",
+            "role": "assistant",
+            "content": "Zaroor shantanu sir! Yeh raha ek simple aur cute sa HTML, CSS aur JavaScript calculator ka code aapke liye:\n\n```html\n<!DOCTYPE html>\n<html>\n<head>\n    <title>My Calculator</title>\n    <style>\n        body { display: flex; justify-content: center; padding-top: 50px; font-family: sans-serif; }\n        .calc { border: 2px solid #ccc; padding: 20px; border-radius: 10px; }\n        input { width: 100%; height: 40px; margin-bottom: 10px; text-align: right; font-size: 20px; }\n        button { width: 45px; height: 45px; margin: 2px; cursor: pointer; }\n    </style>\n</head>\n<body>\n\n<div class=\"calc\">\n    <input type=\"text\" id=\"display\" disabled>\n    <div>\n        <button onclick=\"clearDisplay()\">C</button>\n        <button onclick=\"appendToDisplay('/')\">/</button>\n        <button onclick=\"appendToDisplay('*')\">*</button>\n        <button onclick=\"deleteLast()\">DEL</button>\n    </div>\n    <div>\n        <button onclick=\"appendToDisplay('7')\">7</button>\n        <button onclick=\"appendToDisplay('8')\">8</button>\n        <button onclick=\"appendToDisplay('9')\">9</button>\n        <button onclick=\"appendToDisplay('-')\">-</button>\n    </div>\n    <div>\n        <button onclick=\"appendToDisplay('4')\">4</button>\n        <button onclick=\"appendToDisplay('5')\">5</button>\n        <button onclick=\"appendToDisplay('6')\">6</button>\n        <button onclick=\"appendToDisplay('+')\">+</button>\n    </div>\n    <div>\n        <button onclick=\"appendToDisplay('1')\">1</button>\n        <button onclick=\"appendToDisplay('2')\">2</button>\n        <button onclick=\"appendToDisplay('3')\">3</button>\n        <button onclick=\"calculate()\">=</button>\n    </div>\n</div>\n\n<script>\n    const display = document.getElementById('display');\n    function appendToDisplay(val) { display.value += val; }\n    function clearDisplay() { display.value = ''; }\n    function deleteLast() { display.value = display.value.slice(0, -1); }\n    function calculate() { try { display.value = eval(display.value); } catch { display.value = 'Error'; } }\n</script>\n\n</body>\n</html>\n```\n\nUmeed hai shantanu sir, yeh aapke kaam aayega! Agar kuch aur badlav chahiye ho toh bas bata dijiye ga. 😊",
+            "timestamp": 1788354146665
+          }
+        ]
+      }
+    },
+    "rahul": {
+      "chat_1788357699276": {
+        "id": "chat_1788357699276",
+        "title": "hi",
+        "createdAt": 1788357699276,
+        "messages": [
+          {
+            "id": "msg_1788357705707",
+            "role": "user",
+            "content": "hi",
+            "attachments": [],
+            "timestamp": 1788357705707
+          },
+          {
+            "id": "msg_1788357705744",
+            "role": "assistant",
+            "content": "Namaste rahul sir! ✨ Kahiye, main aapki kya madad kar sakti hoon?",
+            "timestamp": 1788357705743
+          },
+          {
+            "id": "msg_1788357895647",
+            "role": "user",
+            "content": "how to check local host in pc",
+            "attachments": [],
+            "timestamp": 1788357895647
+          },
+          {
+            "id": "msg_1788357895672",
+            "role": "assistant",
+            "content": "Rahul sir, localhost check karne ke liye aap ye steps follow kar sakte hain:\n\n1. **Browser Open Karein:** Sabse pehle apna web browser (jaise Chrome ya Edge) open karein.\n2. **Address Bar mein Type Karein:** Address bar mein `http://localhost` ya `http://127.0.0.1` type karke Enter dabayein.\n3. **Result Check Karein:** Agar aapka koi local server (jaise XAMPP, WAMP, ya Node.js) chal raha hai, toh aapko wahan default page ya aapki application dikh jayegi.\n\n**Ek aur baat:** Agar aapko specific port check karna hai (jaise port 3000), toh aap `http://localhost:3000` type kar sakte hain.\n\nKya aapne koi server start kiya hua hai, rahul sir? Main aur kaise madad kar sakti hoon? 😊",
+            "timestamp": 1788357895671
+          }
+        ]
+      }
+    }
+  }
+}
