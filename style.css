@@ -1228,11 +1228,11 @@ html, body {
 .sidebar-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
   z-index: 95;
-  transition: opacity 0.3s ease, visibility 0.3s ease;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
 }
 
 .sidebar-overlay.hidden {
@@ -1245,28 +1245,51 @@ html, body {
   /* Full viewport lock with momentum scrolling */
   html, body {
     height: 100dvh;
+    min-height: 100dvh;
+    max-height: 100dvh;
     overflow: hidden;
-    -webkit-overflow-scrolling: touch;
+    position: fixed;
+    width: 100%;
   }
 
   .app-container {
     height: 100dvh;
+    min-height: 100dvh;
+    max-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     position: relative;
+    width: 100%;
   }
 
-  /* 1. Mobile Off-Canvas Drawer */
+  .main-workspace {
+    flex: 1 1 auto;
+    height: 100dvh;
+    min-height: 0;
+    max-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    width: 100%;
+  }
+
+  /* 1. Mobile Off-Canvas Drawer (Crystal Clear, No Blur) */
   .sidebar {
     position: fixed;
     top: 0;
     left: 0;
     bottom: 0;
     width: 82vw;
-    max-width: 300px;
+    max-width: 290px;
     height: 100dvh;
     z-index: 100;
-    box-shadow: 20px 0 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(0, 200, 255, 0.15);
+    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.9), 0 0 20px rgba(0, 200, 255, 0.2);
     transform: translateX(0);
-    transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    background: #080c14 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
   }
 
   .sidebar.collapsed {
@@ -1277,12 +1300,14 @@ html, body {
 
   /* 2. Sleek Mobile Top Navigation */
   .top-nav {
-    height: 54px;
+    flex-shrink: 0;
+    height: 48px;
     padding: 0 10px;
     gap: 6px;
-    background: rgba(8, 11, 17, 0.88);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    background: rgba(8, 11, 17, 0.96);
+    border-bottom: 1px solid var(--panel-border);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 
   .nav-left {
@@ -1290,7 +1315,7 @@ html, body {
   }
 
   .nav-title {
-    display: none; /* Hide long title on mobile to prevent squishing */
+    display: none;
   }
 
   .compound-ai-badge {
@@ -1319,7 +1344,7 @@ html, body {
   }
 
   .persona-btn span:not(.persona-icon) {
-    display: none; /* Show only ♂ / ♀ on narrow mobile */
+    display: none;
   }
 
   .persona-icon {
@@ -1339,13 +1364,17 @@ html, body {
   }
 
   .corner-badge {
-    display: none; /* Hidden on mobile to save space for persona & user badge */
+    display: none;
   }
 
-  /* 3. Mobile Chat Feed & Bubble Layout */
+  /* 3. Mobile Chat Feed (Scrollable & Clean) */
   .chat-messages {
-    padding: 12px 10px;
-    gap: 14px;
+    flex: 1 1 0%;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 10px 10px 14px 10px;
+    gap: 12px;
+    -webkit-overflow-scrolling: touch;
   }
 
   .msg-row {
@@ -1365,124 +1394,131 @@ html, body {
   }
 
   .msg-bubble {
-    padding: 12px 14px;
-    border-radius: 16px;
-    font-size: 0.92rem;
-    line-height: 1.5;
+    padding: 10px 13px;
+    border-radius: 14px;
+    font-size: 0.9rem;
+    line-height: 1.45;
   }
 
   .msg-row.user .msg-bubble {
-    border-bottom-right-radius: 4px;
+    border-bottom-right-radius: 3px;
   }
 
   .msg-row.assistant .msg-bubble {
-    border-bottom-left-radius: 4px;
+    border-bottom-left-radius: 3px;
   }
 
   /* Generated Artwork in Mobile Chat */
   .markdown-content img {
-    max-height: 280px;
+    max-height: 250px;
     width: 100%;
     object-fit: cover;
-    border-radius: 12px;
+    border-radius: 10px;
   }
 
   /* Code Block Horizontal Scroll on Mobile */
   pre {
     margin: 8px 0;
-    border-radius: 10px;
+    border-radius: 8px;
   }
 
   pre code {
-    font-size: 0.8rem !important;
-    padding: 10px 12px !important;
+    font-size: 0.78rem !important;
+    padding: 8px 10px !important;
   }
 
-  /* 4. Touch-Optimized Mobile Input Dock */
+  /* 4. Touch-Optimized Mobile Input Dock (Always Visible at Bottom) */
   .input-area {
-    padding: 8px 10px max(10px, env(safe-area-inset-bottom)) 10px;
-    background: linear-gradient(180deg, transparent 0%, rgba(8, 11, 17, 0.95) 40%);
+    flex-shrink: 0;
+    width: 100%;
+    padding: 6px 10px max(8px, env(safe-area-inset-bottom)) 10px;
+    background: rgba(6, 9, 16, 0.98);
+    border-top: 1px solid rgba(0, 200, 255, 0.2);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.6);
+    z-index: 25;
+    gap: 2px;
   }
 
   .input-box {
-    border-radius: 24px;
+    border-radius: 20px;
     padding: 4px 6px 4px 10px;
     gap: 4px;
-    background: rgba(13, 18, 28, 0.92);
+    background: rgba(13, 18, 28, 0.96);
+    border: 1px solid rgba(0, 200, 255, 0.35);
   }
 
-  /* Prevent auto-zoom on iOS */
   #chat-input {
-    font-size: 16px !important; 
+    font-size: 15px !important;
     padding: 6px 4px;
-    max-height: 100px;
+    max-height: 75px;
+    min-height: 22px;
   }
 
   .btn-icon-input {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
   }
 
   .btn-icon-input i {
-    width: 18px;
-    height: 18px;
+    width: 17px;
+    height: 17px;
   }
 
   .btn-send {
-    width: 36px;
-    height: 36px;
+    width: 34px;
+    height: 34px;
     border-radius: 50%;
     flex-shrink: 0;
   }
 
   .system-footnote {
-    font-size: 0.62rem;
-    margin-top: 3px;
+    display: none;
   }
 
   /* 5. Mobile Hero Cards */
   .welcome-hero {
-    padding: 16px 8px;
+    padding: 12px 6px;
+    min-height: auto;
   }
 
   .hero-card {
-    padding: 20px 14px;
-    border-radius: 18px;
+    padding: 16px 10px;
+    border-radius: 14px;
   }
 
   .hero-title {
-    font-size: 1.4rem;
+    font-size: 1.3rem;
   }
 
   .starter-grid {
     grid-template-columns: 1fr;
-    gap: 8px;
+    gap: 6px;
   }
 
   .starter-card {
-    padding: 10px 12px;
+    padding: 8px 10px;
   }
 
   /* 6. Mobile Auth Modal */
   .auth-card {
-    padding: 22px 18px;
-    border-radius: 18px;
+    padding: 20px 16px;
+    border-radius: 16px;
   }
 
   .auth-header h2 {
-    font-size: 1.15rem;
+    font-size: 1.1rem;
   }
 
   /* 7. Mobile Image Modal */
   .modal-card {
     width: 95%;
     max-height: 88vh;
-    padding: 16px;
-    border-radius: 18px;
+    padding: 14px;
+    border-radius: 16px;
   }
 
   .form-row {
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
   }
 }
