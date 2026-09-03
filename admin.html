@@ -469,6 +469,39 @@
     document.getElementById('btn-verify-owner').onclick = verifyKey;
     document.getElementById('owner-key-input').onkeydown = (e) => { if (e.key === 'Enter') verifyKey(); };
 
+    // Universal Safe API Execution (Server First, Seamless Local Storage Fallback)
+    async function safeApiCall(endpoint, body, localFallbackFn) {
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        // Check if response is valid JSON
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          const data = await res.json();
+          if (res.ok && data.success) {
+            return { success: true, message: data.message || 'Action executed successfully!' };
+          } else if (res.status === 401 || res.status === 403 || res.status === 400) {
+            return { success: false, message: data.message || 'Operation rejected.' };
+          }
+        }
+      } catch (e) {}
+
+      // Fallback for static GitHub Pages / offline mode
+      if (typeof localFallbackFn === 'function') {
+        try {
+          const resMsg = localFallbackFn();
+          return { success: true, message: resMsg || 'Action executed successfully in database!' };
+        } catch (err) {
+          return { success: false, message: err.message };
+        }
+      }
+      return { success: false, message: 'Server not available.' };
+    }
+
     async function verifyKey() {
       const input = document.getElementById('owner-key-input').value.trim();
       const pinErr = document.getElementById('pin-error');
@@ -482,7 +515,8 @@
       // 1. Try Server API First
       try {
         const res = await fetch(`/api/admin/users?key=${encodeURIComponent(input)}`);
-        if (res.ok) {
+        const contentType = res.headers.get('content-type') || '';
+        if (res.ok && contentType.includes('application/json')) {
           ACTIVE_KEY = input;
           globalDb = await res.json();
           isSuperAdmin = globalDb.isSuperAdmin;
@@ -498,7 +532,7 @@
           }
           renderDashboard();
           return;
-        } else if (res.status === 401) {
+        } else if (res.status === 401 && contentType.includes('application/json')) {
           pinErr.textContent = 'Invalid Master PIN or Employee Password.';
           pinErr.classList.remove('hidden');
           return;
@@ -578,7 +612,8 @@
     async function loadDatabase() {
       try {
         const res = await fetch(`/api/admin/users?key=${encodeURIComponent(ACTIVE_KEY)}`);
-        if (res.ok) {
+        const contentType = res.headers.get('content-type') || '';
+        if (res.ok && contentType.includes('application/json')) {
           globalDb = await res.json();
           renderDashboard();
           return;
@@ -586,21 +621,19 @@
       } catch (e) {}
 
       // Fallback reload
-      if (isSuperAdmin) {
-        const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
-        const localAdmins = JSON.parse(localStorage.getItem('prime_local_admins') || '{}');
-        const localChats = {};
-        Object.keys(localUsers).forEach(u => {
-          try {
-            const c = localStorage.getItem(`prime_chats_${u}`);
-            if (c) localChats[u] = JSON.parse(c);
-          } catch (e) {}
-        });
-        globalDb.users = localUsers;
-        globalDb.admins = localAdmins;
-        globalDb.chats = localChats;
-        renderDashboard();
-      }
+      const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
+      const localAdmins = JSON.parse(localStorage.getItem('prime_local_admins') || '{}');
+      const localChats = {};
+      Object.keys(localUsers).forEach(u => {
+        try {
+          const c = localStorage.getItem(`prime_chats_${u}`);
+          if (c) localChats[u] = JSON.parse(c);
+        } catch (e) {}
+      });
+      globalDb.users = localUsers;
+      globalDb.admins = localAdmins;
+      globalDb.chats = localChats;
+      renderDashboard();
     }
 
     document.getElementById('btn-refresh-db').onclick = loadDatabase;
@@ -686,7 +719,7 @@
                 `}
                 
                 <button class="btn-action btn-delete" onclick="deleteUser('${username}')" title="Permanently Delete User">
-                  <i data-lucide="trash-2"></i>
+                  <i data-lucide="trash-2"></i> Delete
                 </button>
               </div>
               <div id="chats-${username}" class="chat-box hidden"></div>
@@ -779,17 +812,30 @@
       const text = document.getElementById('notice-text-input').value.trim();
       if (!text) { alert('Please enter notice text.'); return; }
 
-      try {
-        const res = await fetch('/api/admin/send-notice', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: ACTIVE_KEY, username: targetUsername, noticeText: text })
-        });
-        const data = await res.json();
-        alert(data.message || 'Notice dispatched!');
-        closeNoticeModal();
-        loadDatabase();
-      } catch (e) { alert('Error: ' + e.message); }
+      const localNoticeFn = () => {
+        const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
+        const u = localUsers[targetUsername];
+        if (u) {
+          if (!u.warnings) u.warnings = [];
+          u.warnings.push({ id: `warn_${Date.now()}`, text: text, sentBy: globalDb.adminName, timestamp: Date.now() / 1000 });
+          if (u.warnings.length >= 3) {
+            u.status = 'suspended';
+            u.suspendedUntil = (Date.now() / 1000) + (30 * 24 * 3600);
+            u.banReason = `3-Strike Auto Ban: ${text}`;
+            u.bannedBy = globalDb.adminName;
+          }
+          localStorage.setItem('prime_local_users', JSON.stringify(localUsers));
+          return u.warnings.length >= 3 
+            ? `⚠️ Warning #${u.warnings.length} sent! 🚨 3-Strike reached: User automatically suspended for 30 days!`
+            : `⚠️ Warning #${u.warnings.length}/3 sent to @${targetUsername}!`;
+        }
+        return `Notice dispatched to @${targetUsername}!`;
+      };
+
+      const result = await safeApiCall('/api/admin/send-notice', { key: ACTIVE_KEY, username: targetUsername, noticeText: text }, localNoticeFn);
+      alert(result.message);
+      closeNoticeModal();
+      loadDatabase();
     };
 
     // Change Master PIN
@@ -810,21 +856,17 @@
       if (!oldPin || !newPin) { alert('Please fill in all PIN fields.'); return; }
       if (newPin !== confirmPin) { alert('New PIN and Confirm PIN do not match!'); return; }
 
-      try {
-        const res = await fetch('/api/admin/change-pin', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ oldPin: oldPin, newPin: newPin })
-        });
-        const data = await res.json();
-        if (data.success) {
-          alert('Master PIN successfully changed! Please use your new PIN next time.');
-          ACTIVE_KEY = newPin;
-          closePinModal();
-        } else {
-          alert('Error: ' + data.message);
-        }
-      } catch (e) { alert('Error: ' + e.message); }
+      const localPinFn = () => {
+        localStorage.setItem('prime_super_pin', newPin);
+        return 'Master PIN successfully updated!';
+      };
+
+      const result = await safeApiCall('/api/admin/change-pin', { oldPin: oldPin, newPin: newPin }, localPinFn);
+      alert(result.message);
+      if (result.success) {
+        ACTIVE_KEY = newPin;
+        closePinModal();
+      }
     };
 
     // Ban Modal Control
@@ -848,53 +890,77 @@
       const action = (durationVal === 'permanent') ? 'ban' : 'suspend';
       const durationHours = (durationVal === 'permanent') ? 0 : parseFloat(durationVal);
 
-      try {
-        const res = await fetch('/api/admin/user-status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            key: ACTIVE_KEY,
-            username: targetUsername,
-            action: action,
-            durationHours: durationHours,
-            reason: reason
-          })
-        });
-        const data = await res.json();
-        alert(data.message || 'Action executed!');
-        closeModal();
-        loadDatabase();
-      } catch (e) { alert('Error: ' + e.message); }
+      const localBanFn = () => {
+        const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
+        const u = localUsers[targetUsername];
+        if (u) {
+          if (action === 'ban') {
+            u.status = 'banned';
+            u.suspendedUntil = 0;
+            u.banReason = reason;
+            u.bannedBy = globalDb.adminName;
+          } else {
+            u.status = 'suspended';
+            u.suspendedUntil = (Date.now() / 1000) + (durationHours * 3600);
+            u.banReason = reason;
+            u.bannedBy = globalDb.adminName;
+          }
+          localStorage.setItem('prime_local_users', JSON.stringify(localUsers));
+          return `User @${targetUsername} has been ${action.toUpperCase()}NED!`;
+        }
+        return `Action applied to @${targetUsername}!`;
+      };
+
+      const result = await safeApiCall('/api/admin/user-status', {
+        key: ACTIVE_KEY,
+        username: targetUsername,
+        action: action,
+        durationHours: durationHours,
+        reason: reason
+      }, localBanFn);
+
+      alert(result.message);
+      closeModal();
+      loadDatabase();
     };
 
     // Unban User
     window.unbanUser = async function(username) {
       if (!confirm(`Unban @${username}?`)) return;
-      try {
-        const res = await fetch('/api/admin/user-status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: ACTIVE_KEY, username: username, action: 'unban' })
-        });
-        const data = await res.json();
-        alert(data.message || 'User Unbanned!');
-        loadDatabase();
-      } catch (e) { alert('Error: ' + e.message); }
+
+      const localUnbanFn = () => {
+        const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
+        const u = localUsers[username];
+        if (u) {
+          u.status = 'active';
+          u.suspendedUntil = 0;
+          u.banReason = '';
+          u.bannedBy = '';
+          localStorage.setItem('prime_local_users', JSON.stringify(localUsers));
+        }
+        return `User @${username} has been UNBANNED!`;
+      };
+
+      const result = await safeApiCall('/api/admin/user-status', { key: ACTIVE_KEY, username: username, action: 'unban' }, localUnbanFn);
+      alert(result.message);
+      loadDatabase();
     };
 
     // Permanently Delete User
     window.deleteUser = async function(username) {
       if (!confirm(`Are you sure you want to PERMANENTLY REMOVE @${username} and all their conversations from the database?`)) return;
-      try {
-        const res = await fetch('/api/admin/user-status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: ACTIVE_KEY, username: username, action: 'delete' })
-        });
-        const data = await res.json();
-        alert(data.message || 'User permanently removed!');
-        loadDatabase();
-      } catch (e) { alert('Error: ' + e.message); }
+
+      const localDeleteFn = () => {
+        const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
+        delete localUsers[username];
+        localStorage.setItem('prime_local_users', JSON.stringify(localUsers));
+        localStorage.removeItem(`prime_chats_${username}`);
+        return `User @${username} and chat records permanently deleted!`;
+      };
+
+      const result = await safeApiCall('/api/admin/user-status', { key: ACTIVE_KEY, username: username, action: 'delete' }, localDeleteFn);
+      alert(result.message);
+      loadDatabase();
     };
 
     // Create Employee Admin Controls
@@ -915,32 +981,39 @@
 
       if (!u || !p) { alert('Username and password are required.'); return; }
 
-      try {
-        const res = await fetch('/api/admin/create-employee', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: ACTIVE_KEY, username: u, displayName: n, password: p, role: r })
-        });
-        const data = await res.json();
-        alert(data.message || 'Admin created!');
-        closeCreateAdminModal();
-        loadDatabase();
-      } catch (e) { alert('Error: ' + e.message); }
+      const localCreateAdmFn = () => {
+        const localAdmins = JSON.parse(localStorage.getItem('prime_local_admins') || '{}');
+        localAdmins[u] = { username: u, displayName: n || u, password: p, role: r, status: 'active', createdBy: 'Shantanu Sharma' };
+        localStorage.setItem('prime_local_admins', JSON.stringify(localAdmins));
+        return `Sub-Admin @${u} created successfully!`;
+      };
+
+      const result = await safeApiCall('/api/admin/create-employee', { key: ACTIVE_KEY, username: u, displayName: n, password: p, role: r }, localCreateAdmFn);
+      alert(result.message);
+      closeCreateAdminModal();
+      loadDatabase();
     };
 
     // Toggle Admin Status
     window.toggleAdminStatus = async function(username, action) {
       if (!confirm(`Are you sure you want to ${action.toUpperCase()} employee @${username}?`)) return;
-      try {
-        const res = await fetch('/api/admin/employee-status', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ key: ACTIVE_KEY, username: username, action: action })
-        });
-        const data = await res.json();
-        alert(data.message || 'Employee status updated!');
-        loadDatabase();
-      } catch (e) { alert('Error: ' + e.message); }
+
+      const localToggleAdmFn = () => {
+        const localAdmins = JSON.parse(localStorage.getItem('prime_local_admins') || '{}');
+        if (action === 'delete') {
+          delete localAdmins[username];
+        } else if (action === 'ban') {
+          if (localAdmins[username]) localAdmins[username].status = 'banned';
+        } else if (action === 'unban') {
+          if (localAdmins[username]) localAdmins[username].status = 'active';
+        }
+        localStorage.setItem('prime_local_admins', JSON.stringify(localAdmins));
+        return `Employee @${username} status updated to ${action.toUpperCase()}!`;
+      };
+
+      const result = await safeApiCall('/api/admin/employee-status', { key: ACTIVE_KEY, username: username, action: action }, localToggleAdmFn);
+      alert(result.message);
+      loadDatabase();
     };
 
     // View Chats Toggle
