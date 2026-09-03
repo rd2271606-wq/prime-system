@@ -616,17 +616,6 @@
     }
 
     async function loadDatabase() {
-      try {
-        const res = await fetch(`${API_BASE}/api/admin/users?key=${encodeURIComponent(ACTIVE_KEY)}`);
-        const contentType = res.headers.get('content-type') || '';
-        if (res.ok && contentType.includes('application/json')) {
-          globalDb = await res.json();
-          renderDashboard();
-          return;
-        }
-      } catch (e) {}
-
-      // Fallback reload
       const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
       const localAdmins = JSON.parse(localStorage.getItem('prime_local_admins') || '{}');
       const localChats = {};
@@ -636,9 +625,32 @@
           if (c) localChats[u] = JSON.parse(c);
         } catch (e) {}
       });
-      globalDb.users = localUsers;
-      globalDb.admins = localAdmins;
-      globalDb.chats = localChats;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/admin/users?key=${encodeURIComponent(ACTIVE_KEY)}`);
+        const contentType = res.headers.get('content-type') || '';
+        if (res.ok && contentType.includes('application/json')) {
+          const sData = await res.json();
+          globalDb = {
+            users: { ...localUsers, ...(sData.users || {}) },
+            chats: { ...localChats, ...(sData.chats || {}) },
+            admins: { ...localAdmins, ...(sData.admins || {}) },
+            isSuperAdmin: (sData.isSuperAdmin !== undefined) ? sData.isSuperAdmin : isSuperAdmin,
+            adminName: sData.adminName || (isSuperAdmin ? "Shantanu Sharma (Owner & Super Admin)" : "Staff Admin")
+          };
+          renderDashboard();
+          return;
+        }
+      } catch (e) {}
+
+      // Fallback reload
+      globalDb = {
+        users: localUsers,
+        admins: localAdmins,
+        chats: localChats,
+        isSuperAdmin: isSuperAdmin,
+        adminName: isSuperAdmin ? "Shantanu Sharma (Owner & Super Admin)" : "Staff Admin"
+      };
       renderDashboard();
     }
 
@@ -997,7 +1009,10 @@
       const result = await safeApiCall(API_BASE + '/api/admin/create-employee', { key: ACTIVE_KEY, username: u, displayName: n, password: p, role: r }, localCreateAdmFn);
       alert(result.message);
       closeCreateAdminModal();
-      loadDatabase();
+      
+      // Auto-switch to Employee Tab
+      document.getElementById('tab-admins-btn').click();
+      await loadDatabase();
     };
 
     // Toggle Admin Status

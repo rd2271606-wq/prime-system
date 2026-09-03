@@ -246,6 +246,11 @@ async function handleAuthSubmit(e) {
         authSuccess = true;
         userData = { username: data.username, displayName: data.displayName || data.username };
         if (data.chats) AppState.chats = data.chats;
+        
+        // Sync to local cache for instant admin visibility
+        const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
+        localUsers[username.toLowerCase()] = { username: username.toLowerCase(), displayName: userData.displayName, password: password };
+        localStorage.setItem('prime_local_users', JSON.stringify(localUsers));
       } else if (res.status === 403) {
         // Banned or Suspended User
         if (data.banInfo) {
