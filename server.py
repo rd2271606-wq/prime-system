@@ -124,11 +124,12 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
                     "isSuperAdmin": is_super,
                     "adminName": admin_name
                 }
+                resp_bytes = json.dumps(data_to_send, ensure_ascii=False).encode('utf-8')
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/json; charset=utf-8')
-                self.send_header('Access-Control-Allow-Origin', '*')
+                self.send_header('Content-Length', str(len(resp_bytes)))
                 self.end_headers()
-                self.wfile.write(json.dumps(data_to_send, ensure_ascii=False).encode('utf-8'))
+                self.wfile.write(resp_bytes)
                 return
             else:
                 self.send_response(401)
@@ -533,11 +534,12 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
                             res_data = {"success": True, "message": f"Admin @{emp_username} DELETED!"}
                             status = 200
 
+            resp_bytes = json.dumps(res_data, ensure_ascii=False).encode('utf-8')
             self.send_response(status)
             self.send_header('Content-Type', 'application/json; charset=utf-8')
-            self.send_header('Access-Control-Allow-Origin', '*')
+            self.send_header('Content-Length', str(len(resp_bytes)))
             self.end_headers()
-            self.wfile.write(json.dumps(res_data, ensure_ascii=False).encode('utf-8'))
+            self.wfile.write(resp_bytes)
             return
 
         super().do_POST()

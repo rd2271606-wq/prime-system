@@ -4,12 +4,13 @@
  * Full Boot Animation + Login/Register + Direct AI Chat & Image Generation
  */
 
-const IS_LOCAL_SERVER = (
+const CLOUD_BACKEND_URL = 'https://primesystem-backend.onrender.com';
+const API_BASE = (
   window.location.hostname === 'localhost' ||
   window.location.hostname === '127.0.0.1' ||
-  window.location.hostname.startsWith('192.168.') ||
-  window.location.hostname.startsWith('10.')
-);
+  window.location.hostname.startsWith('192.168.')
+) ? '' : CLOUD_BACKEND_URL;
+const IS_LOCAL_SERVER = true;
 
 function getSystemPrompt(persona, userName) {
   const userGreetingName = userName || 'User';
@@ -232,7 +233,7 @@ async function handleAuthSubmit(e) {
   if (IS_LOCAL_SERVER) {
     try {
       const endpoint = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
-      const res = await fetch(endpoint, {
+      const res = await fetch(API_BASE + endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
@@ -348,7 +349,7 @@ async function syncChatsToCloud() {
   try {
     localStorage.setItem(`prime_chats_${AppState.currentUser.username}`, JSON.stringify(AppState.chats));
     if (IS_LOCAL_SERVER) {
-      await fetch('/api/chats/sync', {
+      await fetch(API_BASE + '/api/chats/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -629,7 +630,7 @@ async function handleInChatImageGeneration(promptText, aiMsgId) {
 
   if (IS_LOCAL_SERVER) {
     try {
-      const res = await fetch('/api/generate-image', {
+      const res = await fetch(API_BASE + '/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -899,7 +900,7 @@ async function generateModalImage() {
 
   if (IS_LOCAL_SERVER) {
     try {
-      const res = await fetch('/api/generate-image', {
+      const res = await fetch(API_BASE + '/api/generate-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1269,7 +1270,7 @@ async function verifyActiveSession() {
   if (!IS_LOCAL_SERVER) return;
 
   try {
-    const res = await fetch('/api/auth/verify-session', {
+    const res = await fetch(API_BASE + '/api/auth/verify-session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: AppState.currentUser.username })
@@ -1327,7 +1328,7 @@ function showUserNoticeModal(warning) {
     modal.classList.add('hidden');
     if (AppState.currentUser) {
       try {
-        await fetch('/api/auth/ack-warning', {
+        await fetch(API_BASE + '/api/auth/ack-warning', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username: AppState.currentUser.username, warningId: warning.id })

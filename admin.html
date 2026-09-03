@@ -461,6 +461,12 @@
   </div>
 
   <script>
+    const CLOUD_BACKEND_URL = 'https://primesystem-backend.onrender.com';
+    const API_BASE = (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname.startsWith('192.168.')
+    ) ? '' : CLOUD_BACKEND_URL;
     let ACTIVE_KEY = "";
     let globalDb = null;
     let isSuperAdmin = false;
@@ -514,7 +520,7 @@
 
       // 1. Try Server API First
       try {
-        const res = await fetch(`/api/admin/users?key=${encodeURIComponent(input)}`);
+        const res = await fetch(`${API_BASE}/api/admin/users?key=${encodeURIComponent(input)}`);
         const contentType = res.headers.get('content-type') || '';
         if (res.ok && contentType.includes('application/json')) {
           ACTIVE_KEY = input;
@@ -611,7 +617,7 @@
 
     async function loadDatabase() {
       try {
-        const res = await fetch(`/api/admin/users?key=${encodeURIComponent(ACTIVE_KEY)}`);
+        const res = await fetch(`${API_BASE}/api/admin/users?key=${encodeURIComponent(ACTIVE_KEY)}`);
         const contentType = res.headers.get('content-type') || '';
         if (res.ok && contentType.includes('application/json')) {
           globalDb = await res.json();
@@ -832,7 +838,7 @@
         return `Notice dispatched to @${targetUsername}!`;
       };
 
-      const result = await safeApiCall('/api/admin/send-notice', { key: ACTIVE_KEY, username: targetUsername, noticeText: text }, localNoticeFn);
+      const result = await safeApiCall(API_BASE + '/api/admin/send-notice', { key: ACTIVE_KEY, username: targetUsername, noticeText: text }, localNoticeFn);
       alert(result.message);
       closeNoticeModal();
       loadDatabase();
@@ -861,7 +867,7 @@
         return 'Master PIN successfully updated!';
       };
 
-      const result = await safeApiCall('/api/admin/change-pin', { oldPin: oldPin, newPin: newPin }, localPinFn);
+      const result = await safeApiCall(API_BASE + '/api/admin/change-pin', { oldPin: oldPin, newPin: newPin }, localPinFn);
       alert(result.message);
       if (result.success) {
         ACTIVE_KEY = newPin;
@@ -911,7 +917,7 @@
         return `Action applied to @${targetUsername}!`;
       };
 
-      const result = await safeApiCall('/api/admin/user-status', {
+      const result = await safeApiCall(API_BASE + '/api/admin/user-status', {
         key: ACTIVE_KEY,
         username: targetUsername,
         action: action,
@@ -941,7 +947,7 @@
         return `User @${username} has been UNBANNED!`;
       };
 
-      const result = await safeApiCall('/api/admin/user-status', { key: ACTIVE_KEY, username: username, action: 'unban' }, localUnbanFn);
+      const result = await safeApiCall(API_BASE + '/api/admin/user-status', { key: ACTIVE_KEY, username: username, action: 'unban' }, localUnbanFn);
       alert(result.message);
       loadDatabase();
     };
@@ -958,7 +964,7 @@
         return `User @${username} and chat records permanently deleted!`;
       };
 
-      const result = await safeApiCall('/api/admin/user-status', { key: ACTIVE_KEY, username: username, action: 'delete' }, localDeleteFn);
+      const result = await safeApiCall(API_BASE + '/api/admin/user-status', { key: ACTIVE_KEY, username: username, action: 'delete' }, localDeleteFn);
       alert(result.message);
       loadDatabase();
     };
@@ -988,7 +994,7 @@
         return `Sub-Admin @${u} created successfully!`;
       };
 
-      const result = await safeApiCall('/api/admin/create-employee', { key: ACTIVE_KEY, username: u, displayName: n, password: p, role: r }, localCreateAdmFn);
+      const result = await safeApiCall(API_BASE + '/api/admin/create-employee', { key: ACTIVE_KEY, username: u, displayName: n, password: p, role: r }, localCreateAdmFn);
       alert(result.message);
       closeCreateAdminModal();
       loadDatabase();
@@ -1011,7 +1017,7 @@
         return `Employee @${username} status updated to ${action.toUpperCase()}!`;
       };
 
-      const result = await safeApiCall('/api/admin/employee-status', { key: ACTIVE_KEY, username: username, action: action }, localToggleAdmFn);
+      const result = await safeApiCall(API_BASE + '/api/admin/employee-status', { key: ACTIVE_KEY, username: username, action: action }, localToggleAdmFn);
       alert(result.message);
       loadDatabase();
     };
