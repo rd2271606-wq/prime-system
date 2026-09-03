@@ -41,7 +41,7 @@ const AppState = {
   currentUser: null,
   settings: {
     baseUrl: 'https://kiraai.vn/api/v1',
-    apiKey: 'kira_1a3bdff06cd7b63cfe008c6a393ef7d8',
+    apiKey: 'kira_9d03a8f658960d433b1a00d7570b5c32',
     model: 'prime-omni',
     persona: 'female',
     temperature: 0.65,
@@ -183,6 +183,7 @@ function initAuth() {
       document.getElementById('auth-screen').classList.add('hidden');
       document.getElementById('app').classList.remove('hidden');
       loadCloudChats();
+      verifyActiveSession();
       return;
     } catch (e) {}
   }
@@ -193,17 +194,41 @@ function initAuth() {
 
 async function handleAuthSubmit(e) {
   e.preventDefault();
-  const username = document.getElementById('auth-username').value.trim();
-  const password = document.getElementById('auth-password').value.trim();
+  const usernameInput = document.getElementById('auth-username');
+  const passwordInput = document.getElementById('auth-password');
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value.trim();
   const errorBox = document.getElementById('auth-error-box');
   errorBox.classList.add('hidden');
+  errorBox.textContent = '';
 
-  if (!username || !password) return;
+  if (!username || !password) {
+    errorBox.textContent = 'Please enter both username and password.';
+    errorBox.classList.remove('hidden');
+    return;
+  }
+
+  if (username.length < 3) {
+    errorBox.textContent = 'Username must be at least 3 characters.';
+    errorBox.classList.remove('hidden');
+    return;
+  }
+
+  if (password.length < 3) {
+    errorBox.textContent = 'Password must be at least 3 characters.';
+    errorBox.classList.remove('hidden');
+    return;
+  }
+
+  const submitBtn = document.getElementById('btn-auth-submit');
+  submitBtn.disabled = true;
+  submitBtn.style.opacity = '0.7';
 
   let authSuccess = false;
   let userData = null;
+  let serverReachable = false;
 
-  // 1. Try local server API if running on Localhost
+  // 1. Strict Server Authentication First
   if (IS_LOCAL_SERVER) {
     try {
       const endpoint = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
@@ -212,30 +237,49 @@ async function handleAuthSubmit(e) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          authSuccess = true;
-          userData = { username: data.username, displayName: data.displayName || data.username };
-          if (data.chats) AppState.chats = data.chats;
+
+      serverReachable = true;
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        authSuccess = true;
+        userData = { username: data.username, displayName: data.displayName || data.username };
+        if (data.chats) AppState.chats = data.chats;
+      } else if (res.status === 403) {
+        // Banned or Suspended User
+        if (data.banInfo) {
+          showBanKickoutModal(data.banInfo);
         } else {
-          errorBox.textContent = data.message || 'Authentication error';
+          errorBox.textContent = data.message || 'This account is suspended or banned.';
           errorBox.classList.remove('hidden');
-          return;
         }
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        return;
+      } else {
+        // 401, 400, 404, etc.
+        errorBox.textContent = data.message || (isRegisterMode ? 'Registration failed.' : 'Incorrect username or password.');
+        errorBox.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        return;
       }
-    } catch (err) {}
+    } catch (err) {
+      serverReachable = false;
+    }
   }
 
-  // 2. Client-Side Database (100% Instant & Guaranteed on all domains)
-  if (!authSuccess) {
+  // 2. Strict Client-Side Database Fallback (ONLY if server is completely offline / unreachable)
+  if (!serverReachable) {
     const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
     const uKey = username.toLowerCase();
 
     if (isRegisterMode) {
       if (localUsers[uKey]) {
-        errorBox.textContent = 'Username already exists. Please choose another.';
+        errorBox.textContent = 'Username already exists. Please login or choose another.';
         errorBox.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
         return;
       }
       localUsers[uKey] = { username: uKey, displayName: username, password: password };
@@ -244,22 +288,27 @@ async function handleAuthSubmit(e) {
       authSuccess = true;
     } else {
       const found = localUsers[uKey];
-      if (found && found.password === password) {
-        userData = { username: uKey, displayName: found.displayName };
-        authSuccess = true;
-      } else if (!found) {
-        // Auto-create for instant convenience
-        localUsers[uKey] = { username: uKey, displayName: username, password: password };
-        localStorage.setItem('prime_local_users', JSON.stringify(localUsers));
-        userData = { username: uKey, displayName: username };
-        authSuccess = true;
-      } else {
-        errorBox.textContent = 'Incorrect password.';
+      if (!found) {
+        errorBox.textContent = 'Account not found. Please click "Create Account" to register.';
         errorBox.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
         return;
+      } else if (found.password !== password) {
+        errorBox.textContent = 'Incorrect password. Please try again.';
+        errorBox.classList.remove('hidden');
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
+        return;
+      } else {
+        userData = { username: uKey, displayName: found.displayName || uKey };
+        authSuccess = true;
       }
     }
   }
+
+  submitBtn.disabled = false;
+  submitBtn.style.opacity = '1';
 
   if (authSuccess && userData) {
     AppState.currentUser = userData;
@@ -267,7 +316,7 @@ async function handleAuthSubmit(e) {
     document.getElementById('user-display-name').textContent = AppState.currentUser.displayName;
 
     const savedChats = localStorage.getItem(`prime_chats_${userData.username}`);
-    if (savedChats) {
+    if (savedChats && (!AppState.chats || Object.keys(AppState.chats).length === 0)) {
       try { AppState.chats = JSON.parse(savedChats); } catch (e) {}
     }
 
@@ -277,6 +326,8 @@ async function handleAuthSubmit(e) {
     const sessionIds = Object.keys(AppState.chats);
     if (sessionIds.length > 0) switchChat(sessionIds[0]);
     else createNewChat();
+
+    verifyActiveSession();
   }
 }
 
@@ -1232,7 +1283,6 @@ async function verifyActiveSession() {
       if (data.warnings && data.warnings.length > 0) {
         showUserNoticeModal(data.warnings[0]);
       }
-    }
     }
   } catch (e) {}
 }

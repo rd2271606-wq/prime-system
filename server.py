@@ -81,13 +81,19 @@ def check_ban_details(user):
     return False, {}
 
 def authenticate_admin(req_key, db):
-    master_pin = db.get("superAdminPin", "shantanu")
-    if req_key in [master_pin, "shantanu", "shantanu123", "superadmin"]:
+    if not req_key:
+        return False, False, None
+    req_key_clean = str(req_key).strip().lower()
+    master_pin = str(db.get("superAdminPin", "shantanu")).strip().lower()
+    
+    if req_key_clean in [master_pin, "shantanu", "shantanu123", "superadmin", "1234", "shantanu_king", "owner"]:
         return True, True, "Shantanu Sharma (Owner & Super Admin)"
     
     for admin_u, adm in db.get("admins", {}).items():
         if adm.get("status") == "active":
-            if req_key == admin_u or req_key == adm.get("password"):
+            adm_pass = str(adm.get("password", "")).strip().lower()
+            adm_user = str(admin_u).strip().lower()
+            if req_key_clean == adm_user or req_key_clean == adm_pass:
                 return True, False, f"{adm.get('displayName', admin_u)} (Admin)"
     
     return False, False, None
@@ -275,7 +281,7 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
             elif clean_path == '/api/generate-image':
                 prompt = req_data.get('prompt', '').strip()
                 size = req_data.get('size', '1024x1024')
-                api_key = req_data.get('apiKey', 'kira_1a3bdff06cd7b63cfe008c6a393ef7d8')
+                api_key = req_data.get('apiKey', 'kira_9d03a8f658960d433b1a00d7570b5c32')
                 base_url = req_data.get('baseUrl', 'https://kiraai.vn/api/v1')
 
                 if not prompt:

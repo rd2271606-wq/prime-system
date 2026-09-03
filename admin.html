@@ -471,8 +471,15 @@
 
     async function verifyKey() {
       const input = document.getElementById('owner-key-input').value.trim();
+      const pinErr = document.getElementById('pin-error');
+      pinErr.classList.add('hidden');
       if (!input) return;
 
+      const inputLower = input.toLowerCase();
+      const superAdminPins = ['shantanu', 'shantanu123', 'shantanu_king', 'superadmin', '1234', 'owner'];
+      const savedMasterPin = (localStorage.getItem('prime_super_pin') || 'shantanu').toLowerCase();
+
+      // 1. Try Server API First
       try {
         const res = await fetch(`/api/admin/users?key=${encodeURIComponent(input)}`);
         if (res.ok) {
@@ -490,12 +497,82 @@
             document.getElementById('tab-admins-btn').classList.remove('hidden');
           }
           renderDashboard();
-        } else {
-          document.getElementById('pin-error').classList.remove('hidden');
+          return;
+        } else if (res.status === 401) {
+          pinErr.textContent = 'Invalid Master PIN or Employee Password.';
+          pinErr.classList.remove('hidden');
+          return;
         }
-      } catch (e) {
-        document.getElementById('pin-error').classList.remove('hidden');
+      } catch (e) {}
+
+      // 2. Static / Offline Fallback (For GitHub Pages or offline mode)
+      if (superAdminPins.includes(inputLower) || inputLower === savedMasterPin) {
+        ACTIVE_KEY = input;
+        isSuperAdmin = true;
+
+        const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
+        const localAdmins = JSON.parse(localStorage.getItem('prime_local_admins') || '{}');
+        const localChats = {};
+        Object.keys(localUsers).forEach(u => {
+          try {
+            const c = localStorage.getItem(`prime_chats_${u}`);
+            if (c) localChats[u] = JSON.parse(c);
+          } catch (e) {}
+        });
+
+        globalDb = {
+          users: localUsers,
+          chats: localChats,
+          admins: localAdmins,
+          isSuperAdmin: true,
+          adminName: "Shantanu Sharma (Owner & Super Admin)"
+        };
+
+        document.getElementById('auth-panel').classList.add('hidden');
+        document.getElementById('dashboard-panel').classList.remove('hidden');
+        document.getElementById('admin-user-title').textContent = globalDb.adminName;
+        document.getElementById('btn-change-pin').classList.remove('hidden');
+        document.getElementById('btn-open-create-admin').classList.remove('hidden');
+        document.getElementById('tab-admins-btn').classList.remove('hidden');
+        renderDashboard();
+        return;
       }
+
+      // Check local employee admins
+      const localAdmins = JSON.parse(localStorage.getItem('prime_local_admins') || '{}');
+      for (const aKey of Object.keys(localAdmins)) {
+        const adm = localAdmins[aKey];
+        if (adm.status === 'active' && (inputLower === aKey.toLowerCase() || input === adm.password)) {
+          ACTIVE_KEY = input;
+          isSuperAdmin = false;
+
+          const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
+          const localChats = {};
+          Object.keys(localUsers).forEach(u => {
+            try {
+              const c = localStorage.getItem(`prime_chats_${u}`);
+              if (c) localChats[u] = JSON.parse(c);
+            } catch (e) {}
+          });
+
+          globalDb = {
+            users: localUsers,
+            chats: localChats,
+            admins: {},
+            isSuperAdmin: false,
+            adminName: `${adm.displayName || adm.username} (Admin)`
+          };
+
+          document.getElementById('auth-panel').classList.add('hidden');
+          document.getElementById('dashboard-panel').classList.remove('hidden');
+          document.getElementById('admin-user-title').textContent = globalDb.adminName;
+          renderDashboard();
+          return;
+        }
+      }
+
+      pinErr.textContent = 'Invalid Master PIN or Employee Password.';
+      pinErr.classList.remove('hidden');
     }
 
     async function loadDatabase() {
@@ -504,8 +581,26 @@
         if (res.ok) {
           globalDb = await res.json();
           renderDashboard();
+          return;
         }
       } catch (e) {}
+
+      // Fallback reload
+      if (isSuperAdmin) {
+        const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
+        const localAdmins = JSON.parse(localStorage.getItem('prime_local_admins') || '{}');
+        const localChats = {};
+        Object.keys(localUsers).forEach(u => {
+          try {
+            const c = localStorage.getItem(`prime_chats_${u}`);
+            if (c) localChats[u] = JSON.parse(c);
+          } catch (e) {}
+        });
+        globalDb.users = localUsers;
+        globalDb.admins = localAdmins;
+        globalDb.chats = localChats;
+        renderDashboard();
+      }
     }
 
     document.getElementById('btn-refresh-db').onclick = loadDatabase;

@@ -30,6 +30,39 @@
       "suspendedUntil": 0,
       "banReason": "",
       "bannedBy": ""
+    },
+    "rahul": {
+      "username": "rahul",
+      "displayName": "rahul",
+      "password": "67a29c162b7deb4c725df88cab7b336b482f732b652dbd9e9083dbd49f4c5a5a",
+      "createdAt": 1788406331.7884493,
+      "status": "suspended",
+      "suspendedUntil": 1791000848.2574685,
+      "banReason": "Automatic System Ban: 3 strikes/notices exceeded (hi)",
+      "bannedBy": "Auto-Enforcement (3rd strike by Shantanu Sharma (Owner & Super Admin))",
+      "warnings": [
+        {
+          "id": "warn_1788408121522",
+          "text": "vvv",
+          "sentBy": "Shantanu Sharma (Owner & Super Admin)",
+          "timestamp": 1788408121.522032,
+          "acknowledged": true
+        },
+        {
+          "id": "warn_1788408821599",
+          "text": "hello",
+          "sentBy": "Shantanu Sharma (Owner & Super Admin)",
+          "timestamp": 1788408821.5998523,
+          "acknowledged": true
+        },
+        {
+          "id": "warn_1788408848257",
+          "text": "hi",
+          "sentBy": "Shantanu Sharma (Owner & Super Admin)",
+          "timestamp": 1788408848.2574644,
+          "acknowledged": false
+        }
+      ]
     }
   },
   "chats": {
@@ -77,7 +110,152 @@
       }
     },
     "baduser": {},
-    "badactor": {}
+    "badactor": {},
+    "rahul": {
+      "chat_1788357699276": {
+        "id": "chat_1788357699276",
+        "title": "hi",
+        "createdAt": 1788357699276,
+        "messages": [
+          {
+            "id": "msg_1788357705707",
+            "role": "user",
+            "content": "hi",
+            "attachments": [],
+            "timestamp": 1788357705707
+          },
+          {
+            "id": "msg_1788357705744",
+            "role": "assistant",
+            "content": "Namaste rahul sir! ✨ Kahiye, main aapki kya madad kar sakti hoon?",
+            "timestamp": 1788357705743
+          },
+          {
+            "id": "msg_1788357895647",
+            "role": "user",
+            "content": "how to check local host in pc",
+            "attachments": [],
+            "timestamp": 1788357895647
+          },
+          {
+            "id": "msg_1788357895672",
+            "role": "assistant",
+            "content": "Rahul sir, localhost check karne ke liye aap ye steps follow kar sakte hain:\n\n1. **Browser Open Karein:** Sabse pehle apna web browser (jaise Chrome ya Edge) open karein.\n2. **Address Bar mein Type Karein:** Address bar mein `http://localhost` ya `http://127.0.0.1` type karke Enter dabayein.\n3. **Result Check Karein:** Agar aapka koi local server (jaise XAMPP, WAMP, ya Node.js) chal raha hai, toh aapko wahan default page ya aapki application dikh jayegi.\n\n**Ek aur baat:** Agar aapko specific port check karna hai (jaise port 3000), toh aap `http://localhost:3000` type kar sakte hain.\n\nKya aapne koi server start kiya hua hai, rahul sir? Main aur kaise madad kar sakti hoon? 😊",
+            "timestamp": 1788357895671
+          },
+          {
+            "id": "msg_1788361345506",
+            "role": "user",
+            "content": "hi",
+            "attachments": [],
+            "timestamp": 1788361345506
+          },
+          {
+            "id": "msg_1788361345542",
+            "role": "assistant",
+            "content": "⚠️ **PRIME SYSTEM Notice:** HTTP 429: Failed to reach intelligence server",
+            "timestamp": 1788361345541
+          },
+          {
+            "id": "msg_1788367095503",
+            "role": "user",
+            "content": "hi",
+            "attachments": [],
+            "timestamp": 1788367095503
+          },
+          {
+            "id": "msg_1788367095543",
+            "role": "assistant",
+            "content": "⚠️ **PRIME SYSTEM Notice:** HTTP 429: Failed to reach intelligence server",
+            "timestamp": 1788367095542
+          },
+          {
+            "id": "msg_1788367172176",
+            "role": "user",
+            "content": "hi",
+            "attachments": [],
+            "timestamp": 1788367172176
+          },
+          {
+            "id": "msg_1788367172243",
+            "role": "assistant",
+            "content": "⚠️ **PRIME SYSTEM Notice:** HTTP 429: Failed to reach intelligence server",
+            "timestamp": 1788367172242
+          },
+          {
+            "id": "msg_1788367214769",
+            "role": "user",
+            "content": "hi",
+            "attachments": [],
+            "timestamp": 1788367214769
+          },
+          {
+            "id": "msg_1788367214839",
+            "role": "assistant",
+            "content": "⚠️ **PRIME SYSTEM Notice:** HTTP 429: Failed to reach intelligence server",
+            "timestamp": 1788367214838
+          },
+          {
+            "id": "msg_1788367322393",
+            "role": "user",
+            "content": "hi",
+            "attachments": [],
+            "timestamp": 1788367322393
+          },
+          {
+            "id": "msg_1788367322478",
+            "role": "assistant",
+            "content": "⚠️ **PRIME SYSTEM Notice:** HTTP 429: Failed to reach intelligence server",
+            "timestamp": 1788367322477
+          },
+          {
+            "id": "msg_1788367388534",
+            "role": "user",
+            "content": "hi",
+            "attachments": [],
+            "timestamp": 1788367388534
+          },
+          {
+            "id": "msg_1788367388615",
+            "role": "assistant",
+            "content": "⚠️ **PRIME SYSTEM Notice:** HTTP 429: Failed to reach intelligence server",
+            "timestamp": 1788367388614
+          },
+          {
+            "id": "msg_1788408153562",
+            "role": "user",
+            "content": "hi",
+            "attachments": [],
+            "timestamp": 1788408153562
+          },
+          {
+            "id": "msg_1788408153657",
+            "role": "assistant",
+            "content": "⚠️ **PRIME SYSTEM Notice:** HTTP 429: Failed to reach intelligence server",
+            "timestamp": 1788408153656
+          },
+          {
+            "id": "msg_1788408650309",
+            "role": "user",
+            "content": "hi",
+            "attachments": [],
+            "timestamp": 1788408650309
+          },
+          {
+            "id": "msg_1788408650407",
+            "role": "assistant",
+            "content": "Namaste rahul sir! ✨ Kahiye, aaj main aapki kya madad kar sakti hoon? 😊",
+            "timestamp": 1788408650406
+          }
+        ]
+      },
+      "chat_1788359759154": {
+        "id": "chat_1788359759154",
+        "title": "New Conversation",
+        "createdAt": 1788359759154,
+        "messages": []
+      }
+    }
   },
   "admins": {
     "3": {
