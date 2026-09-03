@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PRIME SYSTEM — Executive Intelligence</title>
   
   <!-- Fonts -->
@@ -54,7 +54,7 @@
   <canvas id="water-canvas"></canvas>
 
   <!-- ==========================================================================
-       1. Futuristic PRIME SYSTEM Boot & Intro Animation
+       1. PRIME SYSTEM Boot & Intro Animation
        ========================================================================== -->
   <div id="boot-screen" class="boot-screen" onclick="dismissBoot()" title="Click to skip">
     <div class="boot-container">
@@ -162,27 +162,21 @@
         <!-- Injected dynamically -->
       </div>
 
-      <!-- Sidebar Footer / Owner Attribution & Control Panel -->
-      <div class="sidebar-footer-container">
-        <a href="admin.html" class="btn-admin-control" title="Open Master Control Panel">
-          <i data-lucide="shield-check"></i>
-          <span>🛡️ Admin Control Panel</span>
-        </a>
-        <div class="sidebar-footer">
-          <div class="owner-card" id="owner-card-btn" title="System Authority: Shantanu Sharma">
-            <div class="owner-avatar">
-              <i data-lucide="award"></i>
-            </div>
-            <div class="owner-info">
-              <div class="owner-label">OWNER & CREATOR</div>
-              <div class="owner-name">Shantanu Sharma</div>
-            </div>
+      <!-- Sidebar Footer / Owner Attribution -->
+      <div class="sidebar-footer">
+        <div class="owner-card" id="owner-card-btn" title="System Authority: Shantanu Sharma">
+          <div class="owner-avatar">
+            <i data-lucide="award"></i>
           </div>
-          <div class="footer-actions">
-            <button id="btn-clear-chats" class="btn-icon" title="Clear All Chats">
-              <i data-lucide="trash-2"></i>
-            </button>
+          <div class="owner-info">
+            <div class="owner-label">OWNER & CREATOR</div>
+            <div class="owner-name">Shantanu Sharma</div>
           </div>
+        </div>
+        <div class="footer-actions">
+          <button id="btn-clear-chats" class="btn-icon" title="Clear All Chats">
+            <i data-lucide="trash-2"></i>
+          </button>
         </div>
       </div>
     </aside>
@@ -222,12 +216,6 @@
               <span>Female</span>
             </button>
           </div>
-
-          <!-- Admin Quick Link -->
-          <a href="admin.html" class="admin-nav-btn" title="Admin Control Panel">
-            <i data-lucide="shield"></i>
-            <span class="admin-nav-txt">Admin</span>
-          </a>
 
           <!-- User Account Badge / Logout -->
           <div class="user-profile-badge" id="btn-logout" title="Click to Logout">
@@ -315,8 +303,8 @@
           <div class="form-group">
             <label>Style Preset</label>
             <select id="image-style-select" class="form-input">
-              <option value="">Classic / Natural</option>
-              <option value="photorealistic, 8k resolution, cinematic studio lighting">Photorealistic 8K</option>
+              <option value="" selected>Photorealistic / Natural</option>
+              <option value="photorealistic, 8k resolution, cinematic studio lighting, highly detailed">Photorealistic 8K</option>
               <option value="hyper-realistic 3D render, octane render, architectural minimalism">Minimalist 3D</option>
               <option value="modern digital art, crisp details, vibrant lighting">Digital Art</option>
               <option value="luxury anime art style, vibrant aesthetic">Anime Masterpiece</option>

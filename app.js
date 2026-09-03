@@ -1,13 +1,3 @@
-
-function enhancePhotorealisticPrompt(rawPrompt, userStyle) {
-  let clean = cleanImagePrompt(rawPrompt);
-  const realismKeywords = "ultra-realistic, 8k uhd, photorealistic photography, hyper-detailed, cinematic studio lighting, shot on 35mm lens, f/1.8 aperture, natural colors, masterwork, sharp focus, 8k resolution, award-winning photo, dslr";
-  if (userStyle) {
-    return `${clean}, ${userStyle}, ${realismKeywords}`;
-  }
-  return `${clean}, ${realismKeywords}`;
-}
-
 /**
  * PRIME SYSTEM — Executive Compound Intelligence
  * Author & Authority: Shantanu Sharma
@@ -59,13 +49,12 @@ const AppState = {
     maxTokens: 4096,
     autoSpeak: false
   },
-  currentSessionId: null,
   chats: {},
+  currentSessionId: null,
   pendingAttachments: [],
   isGenerating: false,
-  isRecording: false,
   isSpeaking: false,
-  activeSpeakMsgId: null,
+  isRecording: false,
   recognition: null,
   cachedVoices: []
 };
@@ -111,107 +100,109 @@ function cleanImagePrompt(text) {
     .trim();
 }
 
-// ==========================================================================
-// 1. Boot Animation Sequence
-// ==========================================================================
-
-function playBootChime() {
-  try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    const now = ctx.currentTime;
-    [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(f, now + i * 0.08);
-      gain.gain.setValueAtTime(0.12, now + i * 0.08);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.35);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(now + i * 0.08);
-      osc.stop(now + i * 0.08 + 0.35);
-    });
-  } catch (e) {}
+function enhanceImagePrompt(rawPrompt, userStyle) {
+  let clean = cleanImagePrompt(rawPrompt);
+  const realismTags = "photorealistic, 8k uhd, cinematic lighting, highly detailed textures, master photography, 35mm photograph, sharp focus, natural colors, realistic skin, volumetric lighting, dslr";
+  if (userStyle) {
+    return `${clean}, ${userStyle}, ${realismTags}`;
+  }
+  return `${clean}, ${realismTags}`;
 }
 
-function runBootAnimation(onComplete) {
+// ==========================================================================
+// 1. Boot Sequence & Initialization
+// ==========================================================================
+
+function initBootSequence() {
   const bootScreen = document.getElementById('boot-screen');
-  const progressFill = document.getElementById('boot-progress-fill');
+  const authScreen = document.getElementById('auth-screen');
+  const appScreen = document.getElementById('app');
   const statusText = document.getElementById('boot-status');
-
-  let completed = false;
-  function finishBoot() {
-    if (completed) return;
-    completed = true;
-    if (bootScreen) {
-      bootScreen.classList.add('fade-out');
-      setTimeout(() => {
-        bootScreen.style.display = 'none';
-        if (onComplete) onComplete();
-      }, 350);
-    }
-  }
-
-  // Guaranteed fail-safe
-  setTimeout(finishBoot, 1800);
+  const progressFill = document.getElementById('boot-progress-fill');
 
   const steps = [
-    { p: 35, t: 'INITIALIZING QUANTUM NEURAL CORE...' },
-    { p: 70, t: 'CONNECTING EXECUTIVE CLOUD DATABASE...' },
-    { p: 95, t: 'AUTHENTICATING SHANTANU SHARMA ECOSYSTEM...' },
-    { p: 100, t: 'PRIME SYSTEM ONLINE • READY' }
+    { text: 'CONNECTING QUANTUM CORE...', progress: '25%' },
+    { text: 'INITIALIZING EXECUTIVE INTELLIGENCE...', progress: '60%' },
+    { text: 'CALIBRATING DUAL PERSONA ENGINE...', progress: '85%' },
+    { text: 'PRIME SYSTEM READY • SHANTANU SHARMA', progress: '100%' }
   ];
 
   let currentStep = 0;
-  playBootChime();
-
   const interval = setInterval(() => {
-    if (currentStep < steps.length && !completed) {
-      if (progressFill) progressFill.style.width = steps[currentStep].p + '%';
-      if (statusText) statusText.textContent = steps[currentStep].t;
+    if (currentStep < steps.length) {
+      if (statusText) statusText.textContent = steps[currentStep].text;
+      if (progressFill) progressFill.style.width = steps[currentStep].progress;
       currentStep++;
     } else {
       clearInterval(interval);
-      setTimeout(finishBoot, 200);
+      setTimeout(() => {
+        if (bootScreen) {
+          bootScreen.classList.add('fade-out');
+          setTimeout(() => { bootScreen.style.display = 'none'; }, 400);
+        }
+        checkAuthentication();
+      }, 400);
     }
-  }, 320);
+  }, 350);
 }
 
 // ==========================================================================
-// 2. Authentication Flow (Universal Localhost & Cloud)
+// 2. Authentication System (Simple Username & Password)
 // ==========================================================================
 
 let isRegisterMode = false;
 
-function initAuth() {
+function checkAuthentication() {
   const savedUser = localStorage.getItem('prime_logged_user');
+  const authScreen = document.getElementById('auth-screen');
+  const appScreen = document.getElementById('app');
+
   if (savedUser) {
     try {
       AppState.currentUser = JSON.parse(savedUser);
       document.getElementById('user-display-name').textContent = AppState.currentUser.displayName || AppState.currentUser.username;
-      document.getElementById('auth-screen').classList.add('hidden');
-      document.getElementById('app').classList.remove('hidden');
+      authScreen.classList.add('hidden');
+      appScreen.classList.remove('hidden');
       loadCloudChats();
-      verifyActiveSession();
       return;
     } catch (e) {}
   }
 
-  document.getElementById('auth-screen').classList.remove('hidden');
-  document.getElementById('app').classList.add('hidden');
+  authScreen.classList.remove('hidden');
+  appScreen.classList.add('hidden');
+}
+
+function setupAuthTabs() {
+  const tabLogin = document.getElementById('tab-login');
+  const tabRegister = document.getElementById('tab-register');
+  const submitBtn = document.getElementById('btn-auth-submit');
+  const errorBox = document.getElementById('auth-error-box');
+
+  tabLogin.onclick = () => {
+    isRegisterMode = false;
+    tabLogin.classList.add('active');
+    tabRegister.classList.remove('active');
+    submitBtn.innerHTML = `<span>Enter PRIME SYSTEM</span><i data-lucide="arrow-right"></i>`;
+    errorBox.classList.add('hidden');
+    try { if (window.lucide) lucide.createIcons(); } catch (e) {}
+  };
+
+  tabRegister.onclick = () => {
+    isRegisterMode = true;
+    tabRegister.classList.add('active');
+    tabLogin.classList.remove('active');
+    submitBtn.innerHTML = `<span>Create Account & Enter</span><i data-lucide="user-plus"></i>`;
+    errorBox.classList.add('hidden');
+    try { if (window.lucide) lucide.createIcons(); } catch (e) {}
+  };
 }
 
 async function handleAuthSubmit(e) {
   e.preventDefault();
-  const usernameInput = document.getElementById('auth-username');
-  const passwordInput = document.getElementById('auth-password');
-  const username = usernameInput.value.trim();
-  const password = passwordInput.value.trim();
+  const username = document.getElementById('auth-username').value.trim();
+  const password = document.getElementById('auth-password').value.trim();
   const errorBox = document.getElementById('auth-error-box');
   errorBox.classList.add('hidden');
-  errorBox.textContent = '';
 
   if (!username || !password) {
     errorBox.textContent = 'Please enter both username and password.';
@@ -256,13 +247,12 @@ async function handleAuthSubmit(e) {
         authSuccess = true;
         userData = { username: data.username, displayName: data.displayName || data.username };
         if (data.chats) AppState.chats = data.chats;
-        
-        // Sync to local cache for instant admin visibility
+
+        // Sync to local cache
         const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
         localUsers[username.toLowerCase()] = { username: username.toLowerCase(), displayName: userData.displayName, password: password };
         localStorage.setItem('prime_local_users', JSON.stringify(localUsers));
       } else if (res.status === 403) {
-        // Banned or Suspended User
         if (data.banInfo) {
           showBanKickoutModal(data.banInfo);
         } else {
@@ -273,7 +263,6 @@ async function handleAuthSubmit(e) {
         submitBtn.style.opacity = '1';
         return;
       } else {
-        // 401, 400, 404, etc.
         errorBox.textContent = data.message || (isRegisterMode ? 'Registration failed.' : 'Incorrect username or password.');
         errorBox.classList.remove('hidden');
         submitBtn.disabled = false;
@@ -285,7 +274,7 @@ async function handleAuthSubmit(e) {
     }
   }
 
-  // 2. Strict Client-Side Database Fallback (ONLY if server is completely offline / unreachable)
+  // 2. Strict Client-Side Fallback (If Server is unreachable)
   if (!serverReachable) {
     const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
     const uKey = username.toLowerCase();
@@ -298,28 +287,26 @@ async function handleAuthSubmit(e) {
         submitBtn.style.opacity = '1';
         return;
       }
-      localUsers[uKey] = { username: uKey, displayName: username, password: password };
+      localUsers[uKey] = {
+        username: uKey,
+        displayName: username,
+        password: password,
+        createdAt: Date.now()
+      };
       localStorage.setItem('prime_local_users', JSON.stringify(localUsers));
-      userData = { username: uKey, displayName: username };
       authSuccess = true;
+      userData = { username: uKey, displayName: username };
     } else {
-      const found = localUsers[uKey];
-      if (!found) {
-        errorBox.textContent = 'Account not found. Please click "Create Account" to register.';
+      const user = localUsers[uKey];
+      if (!user || user.password !== password) {
+        errorBox.textContent = 'Account not found or incorrect password. Please check or create account.';
         errorBox.classList.remove('hidden');
         submitBtn.disabled = false;
         submitBtn.style.opacity = '1';
         return;
-      } else if (found.password !== password) {
-        errorBox.textContent = 'Incorrect password. Please try again.';
-        errorBox.classList.remove('hidden');
-        submitBtn.disabled = false;
-        submitBtn.style.opacity = '1';
-        return;
-      } else {
-        userData = { username: uKey, displayName: found.displayName || uKey };
-        authSuccess = true;
       }
+      authSuccess = true;
+      userData = { username: uKey, displayName: user.displayName || user.username };
     }
   }
 
@@ -328,35 +315,28 @@ async function handleAuthSubmit(e) {
 
   if (authSuccess && userData) {
     AppState.currentUser = userData;
-    localStorage.setItem('prime_logged_user', JSON.stringify(AppState.currentUser));
-    document.getElementById('user-display-name').textContent = AppState.currentUser.displayName;
-
-    const savedChats = localStorage.getItem(`prime_chats_${userData.username}`);
-    if (savedChats && (!AppState.chats || Object.keys(AppState.chats).length === 0)) {
-      try { AppState.chats = JSON.parse(savedChats); } catch (e) {}
-    }
+    localStorage.setItem('prime_logged_user', JSON.stringify(userData));
+    document.getElementById('user-display-name').textContent = userData.displayName;
 
     document.getElementById('auth-screen').classList.add('hidden');
     document.getElementById('app').classList.remove('hidden');
 
-    const sessionIds = Object.keys(AppState.chats);
-    if (sessionIds.length > 0) switchChat(sessionIds[0]);
-    else createNewChat();
-
-    verifyActiveSession();
+    loadCloudChats();
   }
 }
 
 function handleLogout() {
-  if (confirm('Logout from this account?')) {
+  if (confirm('Are you sure you want to log out of PRIME SYSTEM?')) {
     localStorage.removeItem('prime_logged_user');
     AppState.currentUser = null;
+    AppState.chats = {};
+    if (AppState.isSpeaking && window.speechSynthesis) window.speechSynthesis.cancel();
     location.reload();
   }
 }
 
 // ==========================================================================
-// 3. Cloud & Local Chat Sync
+// 3. Conversation & Cloud Sync
 // ==========================================================================
 
 async function syncChatsToCloud() {
@@ -431,7 +411,7 @@ function setPersona(persona) {
 }
 
 // ==========================================================================
-// 4. Voice Engine (Cute Female & Deep Male)
+// 4. Voice Engine
 // ==========================================================================
 
 function updateVoiceCache() {
@@ -456,7 +436,7 @@ function initVoice() {
       AppState.isRecording = true;
       document.getElementById('btn-voice-input').classList.add('recording');
       document.getElementById('voice-banner').classList.remove('hidden');
-      document.getElementById('voice-status-text').textContent = 'Aapki aawaz sun rahi hoon...';
+      document.getElementById('voice-status-text').textContent = 'Listening...';
     };
 
     AppState.recognition.onresult = (e) => {
@@ -472,43 +452,24 @@ function initVoice() {
       document.getElementById('btn-voice-input').classList.remove('recording');
       document.getElementById('voice-banner').classList.add('hidden');
     };
+
+    AppState.recognition.onerror = () => {
+      AppState.isRecording = false;
+      document.getElementById('btn-voice-input').classList.remove('recording');
+      document.getElementById('voice-banner').classList.add('hidden');
+    };
   }
 }
 
 function toggleVoiceInput() {
   if (!AppState.recognition) {
-    alert('Speech recognition is not supported in this browser.');
+    alert('Voice input is not supported in this browser.');
     return;
   }
   if (AppState.isRecording) {
     AppState.recognition.stop();
   } else {
-    AppState.recognition.lang = 'hi-IN';
     AppState.recognition.start();
-  }
-}
-
-function resolveCuteVoice(isFemale) {
-  updateVoiceCache();
-  const voices = AppState.cachedVoices.length > 0 ? AppState.cachedVoices : window.speechSynthesis.getVoices();
-  if (!voices || voices.length === 0) return null;
-
-  if (isFemale) {
-    const femaleKeywords = ['zira', 'jenny', 'aria', 'swara', 'heera', 'kalpana', 'samantha', 'victoria', 'karen', 'female', 'natural'];
-    for (let kw of femaleKeywords) {
-      const match = voices.find(v => v.name.toLowerCase().includes(kw) && !v.name.toLowerCase().includes('david') && !v.name.toLowerCase().includes('male') && !v.name.toLowerCase().includes('mark') && !v.name.toLowerCase().includes('george'));
-      if (match) return match;
-    }
-    const nonMale = voices.find(v => !v.name.toLowerCase().includes('david') && !v.name.toLowerCase().includes('male') && !v.name.toLowerCase().includes('george') && !v.name.toLowerCase().includes('mark') && !v.name.toLowerCase().includes('ravi'));
-    if (nonMale) return nonMale;
-    return voices[1] || voices[0];
-  } else {
-    const maleKeywords = ['david', 'ravi', 'madhur', 'prabhat', 'mark', 'george', 'guy', 'male'];
-    for (let kw of maleKeywords) {
-      const match = voices.find(v => v.name.toLowerCase().includes(kw));
-      if (match) return match;
-    }
-    return voices[0];
   }
 }
 
@@ -516,65 +477,62 @@ function speakMessage(text, msgId) {
   if (!('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
 
-  if (AppState.activeSpeakMsgId === msgId && AppState.isSpeaking) {
-    AppState.isSpeaking = false;
-    AppState.activeSpeakMsgId = null;
-    document.querySelectorAll('.btn-tool.speaking').forEach(b => b.classList.remove('speaking'));
-    document.getElementById('voice-banner').classList.add('hidden');
-    return;
-  }
-
-  let cleanText = sanitizeText(text)
-    .replace(/[#*`_~>\[\]]/g, ' ')
-    .replace(/\((.*?)\)/g, '')
-    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '')
+  const clean = text
+    .replace(/\*\*|\*|_|`|#/g, '')
+    .replace(/!\[.*?\]\(.*?\)/g, '')
+    .replace(/\[.*?\]\(.*?\)/g, '')
     .trim();
 
-  if (!cleanText) return;
+  if (!clean) return;
 
+  const utterance = new SpeechSynthesisUtterance(clean);
   const isFemale = AppState.settings.persona === 'female';
-  const selectedVoice = resolveCuteVoice(isFemale);
 
-  const utterance = new SpeechSynthesisUtterance(cleanText);
-  if (selectedVoice) utterance.voice = selectedVoice;
+  updateVoiceCache();
+  const voices = AppState.cachedVoices;
+  let targetVoice = null;
 
   if (isFemale) {
-    utterance.pitch = 1.38;
-    utterance.rate = 1.04;
+    targetVoice = voices.find(v => (v.name.includes('Swara') || v.name.includes('Heera') || v.name.includes('Google हिन्दी') || v.name.includes('Zira') || v.name.includes('Female')) && (v.lang.includes('hi') || v.lang.includes('IN') || v.lang.includes('en')));
   } else {
-    utterance.pitch = 0.88;
-    utterance.rate = 1.0;
+    targetVoice = voices.find(v => (v.name.includes('Madhur') || v.name.includes('David') || v.name.includes('Ravi') || v.name.includes('Male')) && (v.lang.includes('hi') || v.lang.includes('IN') || v.lang.includes('en')));
   }
 
-  AppState.isSpeaking = true;
-  AppState.activeSpeakMsgId = msgId;
+  if (targetVoice) utterance.voice = targetVoice;
+  utterance.pitch = isFemale ? 1.25 : 0.9;
+  utterance.rate = 1.0;
 
-  document.getElementById('voice-banner').classList.remove('hidden');
-  document.getElementById('voice-status-text').textContent = `PRIME (${isFemale ? 'Cute Female' : 'Male'}) bol rahi hai...`;
+  const banner = document.getElementById('voice-banner');
+  const statusTxt = document.getElementById('voice-status-text');
 
-  const btn = document.querySelector(`[data-speak="${msgId}"]`);
-  if (btn) btn.classList.add('speaking');
+  utterance.onstart = () => {
+    AppState.isSpeaking = true;
+    banner.classList.remove('hidden');
+    statusTxt.textContent = isFemale ? 'PRIME (Female Voice) bol rahi hai...' : 'PRIME (Male Voice) speaking...';
+  };
 
-  utterance.onend = utterance.onerror = () => {
+  utterance.onend = () => {
     AppState.isSpeaking = false;
-    AppState.activeSpeakMsgId = null;
-    document.querySelectorAll('.btn-tool.speaking').forEach(b => b.classList.remove('speaking'));
-    document.getElementById('voice-banner').classList.add('hidden');
+    banner.classList.add('hidden');
+  };
+
+  utterance.onerror = () => {
+    AppState.isSpeaking = false;
+    banner.classList.add('hidden');
   };
 
   window.speechSynthesis.speak(utterance);
 }
 
 // ==========================================================================
-// 5. Multimodal Attachments
+// 5. File Attachments
 // ==========================================================================
 
 function handleFiles(files) {
+  if (!files || files.length === 0) return;
   Array.from(files).forEach(file => {
-    const isImage = file.type.startsWith('image/');
     const reader = new FileReader();
-
-    if (isImage) {
+    if (file.type.startsWith('image/')) {
       reader.onload = (e) => {
         AppState.pendingAttachments.push({
           type: 'image',
@@ -600,48 +558,45 @@ function handleFiles(files) {
 
 function renderTray() {
   const tray = document.getElementById('attachment-tray');
+  tray.innerHTML = '';
   if (AppState.pendingAttachments.length === 0) {
     tray.classList.add('hidden');
-    tray.innerHTML = '';
     return;
   }
   tray.classList.remove('hidden');
-  tray.innerHTML = '';
-
   AppState.pendingAttachments.forEach((att, idx) => {
     const item = document.createElement('div');
-    item.className = 'tray-thumb';
-    if (att.type === 'image') {
-      item.innerHTML = `<img src="${att.dataUrl}"><button data-idx="${idx}">×</button>`;
-    } else {
-      item.innerHTML = `<div style="font-size:9px; padding:4px;">📄 ${att.name.slice(0,6)}</div><button data-idx="${idx}">×</button>`;
-    }
+    item.className = 'tray-item';
+    item.innerHTML = `
+      <i data-lucide="${att.type === 'image' ? 'image' : 'file-text'}"></i>
+      <span>${att.name}</span>
+      <button class="tray-item-del" onclick="removeAttachment(${idx})"><i data-lucide="x"></i></button>
+    `;
     tray.appendChild(item);
   });
-
-  tray.querySelectorAll('button').forEach(b => {
-    b.onclick = () => {
-      const idx = parseInt(b.getAttribute('data-idx'));
-      AppState.pendingAttachments.splice(idx, 1);
-      renderTray();
-    };
-  });
+  try { if (window.lucide) lucide.createIcons(); } catch (e) {}
 }
 
+window.removeAttachment = function(idx) {
+  AppState.pendingAttachments.splice(idx, 1);
+  renderTray();
+};
+
 // ==========================================================================
-// 6. Direct In-Chat AI Image Generator
+// 6. In-Chat AI Image Generator
 // ==========================================================================
 
-async function handleInChatImageGeneration(promptText, aiMsgId) {
-  const cleanPrompt = cleanImagePrompt(promptText) || promptText;
+async function handleInChatImageGeneration(text, aiMsgId) {
+  const cleanPrompt = cleanImagePrompt(text) || text;
   const currentChat = AppState.chats[AppState.currentSessionId];
   const aiMsg = currentChat.messages.find(m => m.id === aiMsgId);
-  const userName = AppState.currentUser ? AppState.currentUser.displayName : 'Sir';
+  const userName = AppState.currentUser ? AppState.currentUser.displayName : 'User';
   const isFemale = AppState.settings.persona === 'female';
 
-  updateBubble(aiMsgId, `🎨 **PRIME ART STUDIO:** *${cleanPrompt}* ke liye ultra-HD visual generate ho raha hai... ✨`);
+  updateBubble(aiMsgId, `🎨 **PRIME ART STUDIO:** *${cleanPrompt}* ke liye visual generate ho raha hai... ✨`);
 
   let imgSrc = null;
+  const enhanced = enhanceImagePrompt(cleanPrompt);
 
   if (IS_LOCAL_SERVER) {
     try {
@@ -649,7 +604,7 @@ async function handleInChatImageGeneration(promptText, aiMsgId) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: enhancePhotorealisticPrompt(cleanPrompt),
+          prompt: enhanced,
           size: '1024x1024',
           apiKey: AppState.settings.apiKey,
           baseUrl: AppState.settings.baseUrl
@@ -674,7 +629,7 @@ async function handleInChatImageGeneration(promptText, aiMsgId) {
         },
         body: JSON.stringify({
           model: 'kira-3.0-image',
-          prompt: enhancePhotorealisticPrompt(cleanPrompt),
+          prompt: enhanced,
           n: 1,
           size: '1024x1024'
         })
@@ -690,9 +645,8 @@ async function handleInChatImageGeneration(promptText, aiMsgId) {
   }
 
   if (!imgSrc) {
-    const encoded = encodeURIComponent(cleanPrompt);
-    const photoEnhanced = encodeURIComponent(enhancePhotorealisticPrompt(cleanPrompt));
-    imgSrc = `https://image.pollinations.ai/prompt/${photoEnhanced}?width=1024&height=1024&nologo=true&seed=${Date.now()}&model=flux-realism`;
+    const encoded = encodeURIComponent(enhanced);
+    imgSrc = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${Date.now()}&model=flux-realism`;
   }
 
   const spokenGreeting = isFemale
@@ -713,7 +667,7 @@ async function handleInChatImageGeneration(promptText, aiMsgId) {
 }
 
 // ==========================================================================
-// 7. Messaging Pipeline (Text LLM + Auto Image Intent)
+// 7. Messaging Pipeline
 // ==========================================================================
 
 async function sendMessage() {
@@ -749,13 +703,6 @@ async function sendMessage() {
     timestamp: Date.now()
   };
   currentChat.messages.push(aiMsg);
-  renderMessages();
-
-  if (currentChat.messages.length <= 2 && text) {
-    currentChat.title = text.slice(0, 26) + (text.length > 26 ? '...' : '');
-    document.getElementById('current-chat-title').textContent = currentChat.title;
-    renderChatList();
-  }
 
   AppState.isGenerating = true;
   updateSendBtn(true);
@@ -909,9 +856,9 @@ async function generateModalImage() {
   if (!prompt) return;
 
   const box = document.getElementById('image-result-box');
-  box.innerHTML = `<div style="padding:25px; color:#00c8ff; text-align:center;"><p>🎨 Generating high-resolution visual...</p></div>`;
+  box.innerHTML = `<div style="padding:25px; color:#00c8ff; text-align:center;"><p>🎨 Generating visual...</p></div>`;
 
-  const finalPrompt = enhancePhotorealisticPrompt(prompt, style);
+  const finalPrompt = enhanceImagePrompt(prompt, style);
   let imgSrc = null;
 
   if (IS_LOCAL_SERVER) {
@@ -962,8 +909,7 @@ async function generateModalImage() {
 
   if (!imgSrc) {
     const encoded = encodeURIComponent(finalPrompt);
-    const photoEnhanced = encodeURIComponent(enhancePhotorealisticPrompt(cleanPrompt));
-    imgSrc = `https://image.pollinations.ai/prompt/${photoEnhanced}?width=1024&height=1024&nologo=true&seed=${Date.now()}&model=flux-realism`;
+    imgSrc = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${Date.now()}&model=flux-realism`;
   }
 
   box.innerHTML = `
@@ -1065,48 +1011,35 @@ function renderMessages() {
 
     let attachmentsHtml = '';
     if (msg.attachments && msg.attachments.length > 0) {
-      attachmentsHtml = '<div style="display:flex; gap:6px; margin-bottom:6px;">';
-      msg.attachments.forEach(a => {
-        if (a.type === 'image') {
-          attachmentsHtml += `<img src="${a.dataUrl}" style="max-width:180px; border-radius:6px;">`;
+      msg.attachments.forEach(att => {
+        if (att.type === 'image') {
+          attachmentsHtml += `<img src="${att.dataUrl}" style="max-height:220px; border-radius:8px; margin-bottom:8px; display:block;" alt="${att.name}">`;
+        } else {
+          attachmentsHtml += `<div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;"><i data-lucide="file"></i> ${att.name}</div>`;
         }
       });
-      attachmentsHtml += '</div>';
     }
 
-    const cleanContent = sanitizeText(msg.content);
-
     row.innerHTML = `
-      ${!isUser ? `<div class="msg-avatar"><i data-lucide="cpu"></i></div>` : ''}
+      <div class="msg-avatar">
+        <i data-lucide="${isUser ? 'user' : 'bot'}"></i>
+      </div>
       <div class="msg-body-wrapper">
         <div class="msg-bubble">
           ${attachmentsHtml}
-          <div class="markdown-content" id="content-${msg.id}">${marked.parse(cleanContent || '')}</div>
+          <div id="content-${msg.id}" class="markdown-content">${marked.parse(sanitizeText(msg.content) || '')}</div>
         </div>
         ${!isUser ? `
           <div class="msg-toolbar">
-            <button class="btn-tool" data-speak="${msg.id}"><i data-lucide="volume-2"></i> Speak</button>
-            <button class="btn-tool copy-btn"><i data-lucide="copy"></i> Copy</button>
+            <button class="btn-tool" onclick="speakMessage(decodeURIComponent('${encodeURIComponent(msg.content)}'), '${msg.id}')" title="Listen Audio">
+              <i data-lucide="volume-2"></i>
+            </button>
           </div>
         ` : ''}
       </div>
-      ${isUser ? `<div class="msg-avatar"><i data-lucide="user"></i></div>` : ''}
     `;
-
     container.appendChild(row);
-    highlightCodes(row.querySelector('.markdown-content'));
-
-    const speakBtn = row.querySelector(`[data-speak="${msg.id}"]`);
-    if (speakBtn) speakBtn.onclick = () => speakMessage(cleanContent, msg.id);
-
-    const copyBtn = row.querySelector('.copy-btn');
-    if (copyBtn) {
-      copyBtn.onclick = () => {
-        navigator.clipboard.writeText(cleanContent);
-        copyBtn.textContent = 'Copied!';
-        setTimeout(() => { copyBtn.innerHTML = '<i data-lucide="copy"></i> Copy'; try { if (window.lucide) lucide.createIcons(); } catch (e) {} }, 1500);
-      };
-    }
+    highlightCodes(row);
   });
 
   try { if (window.lucide) lucide.createIcons(); } catch (e) {}
@@ -1116,47 +1049,34 @@ function renderMessages() {
 function renderChatList() {
   const list = document.getElementById('chat-list');
   list.innerHTML = '';
-  const sessionIds = Object.keys(AppState.chats).sort((a, b) => AppState.chats[b].createdAt - AppState.chats[a].createdAt);
+  const sessionIds = Object.keys(AppState.chats).reverse();
 
   sessionIds.forEach(id => {
     const chat = AppState.chats[id];
     const item = document.createElement('div');
     item.className = `chat-item ${id === AppState.currentSessionId ? 'active' : ''}`;
-    item.innerHTML = `
-      <div class="chat-item-title"><i data-lucide="message-square"></i><span>${chat.title}</span></div>
-      <button class="chat-item-del"><i data-lucide="trash-2"></i></button>
-    `;
     item.onclick = () => switchChat(id);
-    item.querySelector('.chat-item-del').onclick = (e) => deleteChat(id, e);
+    item.innerHTML = `
+      <div class="chat-item-title">
+        <i data-lucide="message-square"></i>
+        <span>${chat.title || 'Conversation'}</span>
+      </div>
+      <button class="chat-item-del" onclick="deleteChat('${id}', event)" title="Delete"><i data-lucide="trash-2"></i></button>
+    `;
     list.appendChild(item);
   });
+
   try { if (window.lucide) lucide.createIcons(); } catch (e) {}
 }
 
 // ==========================================================================
-// 10. Event Listeners & Startup
+// 10. Event Bindings
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
-  runBootAnimation(() => {
-    initAuth();
-  });
-
+  initBootSequence();
+  setupAuthTabs();
   initVoice();
-
-  document.getElementById('tab-login').onclick = () => {
-    isRegisterMode = false;
-    document.getElementById('tab-login').classList.add('active');
-    document.getElementById('tab-register').classList.remove('active');
-    document.getElementById('btn-auth-submit').querySelector('span').textContent = 'Enter PRIME SYSTEM';
-  };
-
-  document.getElementById('tab-register').onclick = () => {
-    isRegisterMode = true;
-    document.getElementById('tab-register').classList.add('active');
-    document.getElementById('tab-login').classList.remove('active');
-    document.getElementById('btn-auth-submit').querySelector('span').textContent = 'Create Account';
-  };
 
   document.getElementById('auth-form').onsubmit = handleAuthSubmit;
   document.getElementById('btn-logout').onclick = handleLogout;
@@ -1241,7 +1161,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================================================
-// Active Session Heartbeat & Instant Kickout Engine
+// 11. Active Session Heartbeat & Instant Kickout Engine
 // ==========================================================================
 
 function showBanKickoutModal(banInfo) {
@@ -1305,13 +1225,9 @@ async function verifyActiveSession() {
   } catch (e) {}
 }
 
-// Check session every 8 seconds
 setInterval(verifyActiveSession, 8000);
 
-// ==========================================================================
 // Warning Notice Alert Popups
-// ==========================================================================
-
 function showUserNoticeModal(warning) {
   let modal = document.getElementById('user-notice-overlay');
   if (!modal) {
@@ -1343,7 +1259,7 @@ function showUserNoticeModal(warning) {
 
   document.getElementById('btn-ack-notice').onclick = async () => {
     modal.classList.add('hidden');
-    if (AppState.currentUser) {
+    if (IS_LOCAL_SERVER && AppState.currentUser) {
       try {
         await fetch(API_BASE + '/api/auth/ack-warning', {
           method: 'POST',
