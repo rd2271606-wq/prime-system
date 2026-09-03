@@ -63,6 +63,17 @@
           "acknowledged": false
         }
       ]
+    },
+    "testuser99": {
+      "username": "testuser99",
+      "displayName": "testuser99",
+      "password": "ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f",
+      "createdAt": 1788412984.2119806,
+      "status": "active",
+      "suspendedUntil": 0,
+      "banReason": "",
+      "bannedBy": "",
+      "warnings": []
     }
   },
   "chats": {
@@ -255,7 +266,8 @@
         "createdAt": 1788359759154,
         "messages": []
       }
-    }
+    },
+    "testuser99": {}
   },
   "admins": {
     "3": {

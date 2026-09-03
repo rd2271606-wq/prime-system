@@ -1,3 +1,13 @@
+
+function enhancePhotorealisticPrompt(rawPrompt, userStyle) {
+  let clean = cleanImagePrompt(rawPrompt);
+  const realismKeywords = "ultra-realistic, 8k uhd, photorealistic photography, hyper-detailed, cinematic studio lighting, shot on 35mm lens, f/1.8 aperture, natural colors, masterwork, sharp focus, 8k resolution, award-winning photo, dslr";
+  if (userStyle) {
+    return `${clean}, ${userStyle}, ${realismKeywords}`;
+  }
+  return `${clean}, ${realismKeywords}`;
+}
+
 /**
  * PRIME SYSTEM — Executive Compound Intelligence
  * Author & Authority: Shantanu Sharma
@@ -639,7 +649,7 @@ async function handleInChatImageGeneration(promptText, aiMsgId) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          prompt: `${cleanPrompt}, highly detailed, 8k resolution, cinematic lighting`,
+          prompt: enhancePhotorealisticPrompt(cleanPrompt),
           size: '1024x1024',
           apiKey: AppState.settings.apiKey,
           baseUrl: AppState.settings.baseUrl
@@ -664,7 +674,7 @@ async function handleInChatImageGeneration(promptText, aiMsgId) {
         },
         body: JSON.stringify({
           model: 'kira-3.0-image',
-          prompt: `${cleanPrompt}, highly detailed, 8k resolution, cinematic lighting`,
+          prompt: enhancePhotorealisticPrompt(cleanPrompt),
           n: 1,
           size: '1024x1024'
         })
@@ -681,7 +691,8 @@ async function handleInChatImageGeneration(promptText, aiMsgId) {
 
   if (!imgSrc) {
     const encoded = encodeURIComponent(cleanPrompt);
-    imgSrc = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${Date.now()}&model=flux`;
+    const photoEnhanced = encodeURIComponent(enhancePhotorealisticPrompt(cleanPrompt));
+    imgSrc = `https://image.pollinations.ai/prompt/${photoEnhanced}?width=1024&height=1024&nologo=true&seed=${Date.now()}&model=flux-realism`;
   }
 
   const spokenGreeting = isFemale
@@ -900,7 +911,7 @@ async function generateModalImage() {
   const box = document.getElementById('image-result-box');
   box.innerHTML = `<div style="padding:25px; color:#00c8ff; text-align:center;"><p>🎨 Generating high-resolution visual...</p></div>`;
 
-  const finalPrompt = style ? `${prompt}, ${style}` : prompt;
+  const finalPrompt = enhancePhotorealisticPrompt(prompt, style);
   let imgSrc = null;
 
   if (IS_LOCAL_SERVER) {
@@ -951,7 +962,8 @@ async function generateModalImage() {
 
   if (!imgSrc) {
     const encoded = encodeURIComponent(finalPrompt);
-    imgSrc = `https://image.pollinations.ai/prompt/${encoded}?width=1024&height=1024&nologo=true&seed=${Date.now()}&model=flux`;
+    const photoEnhanced = encodeURIComponent(enhancePhotorealisticPrompt(cleanPrompt));
+    imgSrc = `https://image.pollinations.ai/prompt/${photoEnhanced}?width=1024&height=1024&nologo=true&seed=${Date.now()}&model=flux-realism`;
   }
 
   box.innerHTML = `

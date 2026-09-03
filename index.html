@@ -162,21 +162,27 @@
         <!-- Injected dynamically -->
       </div>
 
-      <!-- Sidebar Footer / Owner Attribution -->
-      <div class="sidebar-footer">
-        <div class="owner-card" id="owner-card-btn" title="System Authority">
-          <div class="owner-avatar">
-            <i data-lucide="award"></i>
+      <!-- Sidebar Footer / Owner Attribution & Control Panel -->
+      <div class="sidebar-footer-container">
+        <a href="admin.html" class="btn-admin-control" title="Open Master Control Panel">
+          <i data-lucide="shield-check"></i>
+          <span>🛡️ Admin Control Panel</span>
+        </a>
+        <div class="sidebar-footer">
+          <div class="owner-card" id="owner-card-btn" title="System Authority: Shantanu Sharma">
+            <div class="owner-avatar">
+              <i data-lucide="award"></i>
+            </div>
+            <div class="owner-info">
+              <div class="owner-label">OWNER & CREATOR</div>
+              <div class="owner-name">Shantanu Sharma</div>
+            </div>
           </div>
-          <div class="owner-info">
-            <div class="owner-label">OWNER & CREATOR</div>
-            <div class="owner-name">Shantanu Sharma</div>
+          <div class="footer-actions">
+            <button id="btn-clear-chats" class="btn-icon" title="Clear All Chats">
+              <i data-lucide="trash-2"></i>
+            </button>
           </div>
-        </div>
-        <div class="footer-actions">
-          <button id="btn-clear-chats" class="btn-icon" title="Clear All Chats">
-            <i data-lucide="trash-2"></i>
-          </button>
         </div>
       </div>
     </aside>
@@ -216,6 +222,12 @@
               <span>Female</span>
             </button>
           </div>
+
+          <!-- Admin Quick Link -->
+          <a href="admin.html" class="admin-nav-btn" title="Admin Control Panel">
+            <i data-lucide="shield"></i>
+            <span class="admin-nav-txt">Admin</span>
+          </a>
 
           <!-- User Account Badge / Logout -->
           <div class="user-profile-badge" id="btn-logout" title="Click to Logout">

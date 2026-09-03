@@ -1522,3 +1522,57 @@ html, body {
     gap: 8px;
   }
 }
+/* Admin Control Panel Buttons in Sidebar & Nav */
+.sidebar-footer-container {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.btn-admin-control {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(135deg, rgba(0, 200, 255, 0.18), rgba(0, 119, 255, 0.25));
+  border: 1px solid var(--accent-cyan);
+  color: #fff;
+  text-decoration: none;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  transition: var(--transition);
+  box-shadow: 0 0 15px rgba(0, 200, 255, 0.15);
+}
+
+.btn-admin-control:hover {
+  background: linear-gradient(135deg, #00c8ff, #0077ff);
+  color: #000;
+  transform: translateY(-1px);
+  box-shadow: 0 0 20px rgba(0, 200, 255, 0.4);
+}
+
+.admin-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  background: rgba(0, 200, 255, 0.12);
+  border: 1px solid rgba(0, 200, 255, 0.3);
+  color: var(--accent-cyan);
+  text-decoration: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  transition: var(--transition);
+}
+
+.admin-nav-btn:hover {
+  background: var(--accent-cyan);
+  color: #000;
+}
+
+.admin-nav-btn i { width: 13px; height: 13px; }
