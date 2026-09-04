@@ -173,7 +173,7 @@ html, body {
 }
 
 /* ==========================================================================
-   Auth Screen Modal
+   Google Firebase Auth Screen Modal
    ========================================================================== */
 .auth-screen {
   position: fixed;
@@ -189,142 +189,99 @@ html, body {
 
 .auth-card {
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
   background: #0c121d;
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-lg);
-  padding: 28px 24px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 30px rgba(0, 200, 255, 0.1);
+  padding: 32px 28px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 30px rgba(0, 200, 255, 0.12);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
+  text-align: center;
 }
 
 .auth-header { text-align: center; }
 
 .auth-logo {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   background: var(--accent-gradient);
   color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 8px;
-  box-shadow: 0 0 20px rgba(0, 200, 255, 0.35);
+  margin-bottom: 12px;
+  box-shadow: 0 0 25px rgba(0, 200, 255, 0.4);
 }
 
-.auth-header h2 { font-size: 1.3rem; font-weight: 800; color: #fff; margin-bottom: 4px; }
-.auth-header p { font-size: 0.78rem; color: var(--text-sub); }
+.auth-header h2 { font-size: 1.4rem; font-weight: 800; color: #fff; margin-bottom: 4px; letter-spacing: 1px; }
+.auth-header p { font-size: 0.82rem; color: var(--accent-cyan); font-weight: 600; }
 
-.auth-tabs {
-  display: flex;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-sm);
-  padding: 3px;
-  gap: 3px;
-}
-
-.auth-tab {
-  flex: 1;
-  padding: 7px;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  border: none;
-  color: var(--text-sub);
-  font-size: 0.82rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: var(--transition);
-}
-
-.auth-tab.active {
-  background: var(--accent-gradient);
-  color: #fff;
-}
-
-.auth-form {
+.auth-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
-.form-group { display: flex; flex-direction: column; gap: 6px; }
-.form-group label { font-size: 0.76rem; font-weight: 600; color: var(--text-sub); }
+.auth-desc {
+  font-size: 0.86rem;
+  color: var(--text-sub);
+  line-height: 1.5;
+}
 
-.input-with-icon {
-  position: relative;
+.btn-google-signin {
+  width: 100%;
   display: flex;
   align-items: center;
-}
-
-.input-with-icon i {
-  position: absolute;
-  left: 10px;
-  color: var(--text-muted);
-  width: 16px;
-  height: 16px;
-}
-
-.input-with-icon input {
-  padding-left: 34px !important;
-  width: 100%;
-}
-
-.form-input {
-  width: 100%;
-  padding: 9px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--panel-border);
+  justify-content: center;
+  gap: 12px;
+  background: #ffffff;
+  color: #1f2937;
+  border: none;
   border-radius: var(--radius-sm);
-  color: #fff;
+  padding: 12px 18px;
+  font-size: 0.95rem;
+  font-weight: 600;
   font-family: var(--font-main);
-  font-size: 0.88rem;
-  outline: none;
+  cursor: pointer;
   transition: var(--transition);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
-.form-input:focus {
-  border-color: var(--accent-cyan);
-  background: rgba(0, 200, 255, 0.04);
+.btn-google-signin:hover {
+  background: #f8fafc;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(255, 255, 255, 0.2);
+}
+
+.btn-google-signin:active {
+  transform: translateY(0);
+}
+
+.google-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
 }
 
 .auth-error-box {
-  padding: 8px 12px;
+  padding: 10px 14px;
   border-radius: var(--radius-sm);
   background: rgba(239, 68, 68, 0.15);
   border: 1px solid rgba(239, 68, 68, 0.4);
   color: #fca5a5;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   text-align: center;
 }
-
-.btn-primary {
-  background: var(--accent-gradient);
-  color: #fff;
-  border: none;
-  padding: 9px 16px;
-  border-radius: var(--radius-sm);
-  font-weight: 600;
-  font-size: 0.85rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  transition: var(--transition);
-}
-
-.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
-.btn-primary.full-width { width: 100%; }
 
 .auth-footer {
   text-align: center;
   font-size: 0.72rem;
   color: var(--text-muted);
   border-top: 1px solid var(--panel-border);
-  padding-top: 10px;
+  padding-top: 12px;
 }
 
 /* ==========================================================================
@@ -593,28 +550,75 @@ html, body {
   color: #fff;
 }
 
+/* User Auth in Navbar */
+.nav-user-container {
+  display: flex;
+  align-items: center;
+}
+
+.btn-nav-google {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: #ffffff;
+  color: #1f2937;
+  border: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.btn-nav-google:hover {
+  background: #f1f5f9;
+  transform: translateY(-1px);
+}
+
 .user-profile-badge {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--panel-border);
   font-size: 0.76rem;
   color: #fff;
-  cursor: pointer;
   transition: var(--transition);
 }
 
 .user-profile-badge:hover {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: #ef4444;
+  border-color: var(--accent-cyan);
 }
 
-.user-profile-badge i { width: 14px; height: 14px; color: var(--accent-cyan); }
-.user-profile-badge .logout-icon { width: 12px; height: 12px; opacity: 0.6; }
-.user-profile-badge:hover .logout-icon { opacity: 1; color: #ef4444; }
+.user-avatar-small {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--accent-cyan);
+}
+
+.btn-nav-logout {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  margin-left: 2px;
+  border-radius: 4px;
+}
+
+.btn-nav-logout:hover {
+  color: #ef4444;
+}
+
+.btn-nav-logout i { width: 14px; height: 14px; }
 
 .corner-badge {
   display: flex;
@@ -1115,4 +1119,5 @@ html, body {
   .starter-grid { grid-template-columns: 1fr; }
   .corner-badge { display: none; }
   .persona-btn span:not(.persona-icon) { display: none; }
+  .btn-nav-google span { display: none; }
 }

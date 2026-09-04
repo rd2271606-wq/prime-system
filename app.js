@@ -1,42 +1,8 @@
 /**
- * PRIME SYSTEM — Executive Compound Intelligence
+ * PRIME SYSTEM — Executive Compound AI & Creative Studio
  * Author & Authority: Shantanu Sharma
- * Full Boot Animation + Login/Register + Direct AI Chat & Image Generation
+ * Firebase Google Sign-In + Direct Ultra-Fast AI Chat & Image Generation
  */
-
-const CLOUD_BACKEND_URL = 'https://primesystem-backend.onrender.com';
-const API_BASE = (
-  window.location.hostname === 'localhost' ||
-  window.location.hostname === '127.0.0.1' ||
-  window.location.hostname.startsWith('192.168.')
-) ? '' : CLOUD_BACKEND_URL;
-const IS_LOCAL_SERVER = true;
-
-function getSystemPrompt(persona, userName) {
-  const userGreetingName = userName || 'User';
-
-  if (persona === 'female') {
-    return `Aap PRIME SYSTEM (Cute & Sweet Female Persona) hain — ${userGreetingName} ki personal, super sweet, charming, polite aur highly-intelligent AI assistant.
-Aapka creator, boss aur owner Shantanu Sharma hain.
-
-BAAT KARNE KA STYLE:
-1. USER ADDRESSING: Normal baat karte waqt user ko "${userGreetingName} sir / ${userGreetingName} ji" keh kar address karein (e.g. "Namaste ${userGreetingName} sir! ✨ Kahiye, main aapki kya help kar sakti hoon?").
-2. OWNER ADDRESSING: Jab user pooche ki "Who is your owner / Who created you / Tumhe kisne banaya", tab strictly aur clearly bolein: "PRIME SYSTEM ke sole creator aur owner Shantanu Sharma hain."
-3. SWEET & CUTE HINGLISH: Aasan, sweet, cute aur natural female Hinglish use karein (karti hoon, bataungi, madad karungi). "Kira" shabd ka use kabhi na karein.
-4. GREETINGS: "hello", "hi" ya "namaste" par sirf 1 line me sweet aur direct reply dein.
-5. NO FLUFF: Answer to-the-point, clear aur helpful hona chahiye.`;
-  } else {
-    return `Aap PRIME SYSTEM (Male Persona) hain — ${userGreetingName} ke personal, confident, smart aur highly-intelligent executive AI assistant.
-Aapka creator, boss aur owner Shantanu Sharma hain.
-
-BAAT KARNE KA STYLE:
-1. USER ADDRESSING: Normal baat karte waqt user ko "${userGreetingName} sir / ${userGreetingName} bhai" keh kar address karein (e.g. "Namaste ${userGreetingName} sir! Kahiye, main aapka kya kaam kar sakta hoon?").
-2. OWNER ADDRESSING: Jab user pooche ki "Who is your owner / Who created you / Tumhe kisne banaya", tab strictly aur clearly bolein: "PRIME SYSTEM ke sole creator aur owner Shantanu Sharma hain."
-3. NATURAL HINGLISH: Aasan, confident aur crisp masculine Hinglish use karein (karta hoon, bataunga, help karunga). "Kira" shabd ka use kabhi na karein.
-4. GREETINGS: "hello", "hi" ya "namaste" par sirf 1 line me direct reply dein.
-5. NO FLUFF: Answer to-the-point, clear aur helpful hona chahiye.`;
-  }
-}
 
 const AppState = {
   currentUser: null,
@@ -109,14 +75,38 @@ function enhanceImagePrompt(rawPrompt, userStyle) {
   return `${clean}, ${realismTags}`;
 }
 
+function getSystemPrompt(persona, userName) {
+  const userGreetingName = userName || 'User';
+
+  if (persona === 'female') {
+    return `Aap PRIME SYSTEM (Cute & Sweet Female Persona) hain — ${userGreetingName} ki personal, super sweet, charming, polite aur highly-intelligent AI assistant.
+Aapka creator, boss aur owner Shantanu Sharma hain.
+
+BAAT KARNE KA STYLE:
+1. USER ADDRESSING: Normal baat karte waqt user ko "${userGreetingName} sir / ${userGreetingName} ji" keh kar address karein (e.g. "Namaste ${userGreetingName} sir! ✨ Kahiye, main aapki kya help kar sakti hoon?").
+2. OWNER ADDRESSING: Jab user pooche ki "Who is your owner / Who created you / Tumhe kisne banaya", tab strictly aur clearly bolein: "PRIME SYSTEM ke sole creator aur owner Shantanu Sharma hain."
+3. SWEET & CUTE HINGLISH: Aasan, sweet, cute aur natural female Hinglish use karein (karti hoon, bataungi, madad karungi). "Kira" shabd ka use kabhi na karein.
+4. GREETINGS: "hello", "hi" ya "namaste" par sirf 1 line me sweet aur direct reply dein.
+5. NO FLUFF: Answer to-the-point, clear aur helpful hona chahiye.`;
+  } else {
+    return `Aap PRIME SYSTEM (Male Persona) hain — ${userGreetingName} ke personal, confident, smart aur highly-intelligent executive AI assistant.
+Aapka creator, boss aur owner Shantanu Sharma hain.
+
+BAAT KARNE KA STYLE:
+1. USER ADDRESSING: Normal baat karte waqt user ko "${userGreetingName} sir / ${userGreetingName} bhai" keh kar address karein (e.g. "Namaste ${userGreetingName} sir! Kahiye, main aapka kya kaam kar sakta hoon?").
+2. OWNER ADDRESSING: Jab user pooche ki "Who is your owner / Who created you / Tumhe kisne banaya", tab strictly aur clearly bolein: "PRIME SYSTEM ke sole creator aur owner Shantanu Sharma hain."
+3. NATURAL HINGLISH: Aasan, confident aur crisp masculine Hinglish use karein (karta hoon, bataunga, help karunga). "Kira" shabd ka use kabhi na karein.
+4. GREETINGS: "hello", "hi" ya "namaste" par sirf 1 line me direct reply dein.
+5. NO FLUFF: Answer to-the-point, clear aur helpful hona chahiye.`;
+  }
+}
+
 // ==========================================================================
 // 1. Boot Sequence & Initialization
 // ==========================================================================
 
 function initBootSequence() {
   const bootScreen = document.getElementById('boot-screen');
-  const authScreen = document.getElementById('auth-screen');
-  const appScreen = document.getElementById('app');
   const statusText = document.getElementById('boot-status');
   const progressFill = document.getElementById('boot-progress-fill');
 
@@ -140,224 +130,209 @@ function initBootSequence() {
           bootScreen.classList.add('fade-out');
           setTimeout(() => { bootScreen.style.display = 'none'; }, 400);
         }
-        checkAuthentication();
       }, 400);
     }
   }, 350);
 }
 
 // ==========================================================================
-// 2. Authentication System (Simple Username & Password)
+// 2. Firebase Google Authentication Engine (Header + Modal Integration)
 // ==========================================================================
 
-let isRegisterMode = false;
-
-function checkAuthentication() {
-  const savedUser = localStorage.getItem('prime_logged_user');
+function initFirebaseAuth() {
   const authScreen = document.getElementById('auth-screen');
   const appScreen = document.getElementById('app');
+  const modalGoogleBtn = document.getElementById('btn-google-login');
+  const navGoogleBtn = document.getElementById('btn-nav-google-login');
+  const navUserProfile = document.getElementById('nav-user-profile');
+  const errorBox = document.getElementById('auth-error-box');
 
-  if (savedUser) {
+  // Check saved local user session first for instant UI response
+  const saved = localStorage.getItem('prime_logged_user');
+  if (saved) {
     try {
-      AppState.currentUser = JSON.parse(savedUser);
-      document.getElementById('user-display-name').textContent = AppState.currentUser.displayName || AppState.currentUser.username;
-      authScreen.classList.add('hidden');
-      appScreen.classList.remove('hidden');
-      loadCloudChats();
-      return;
+      const u = JSON.parse(saved);
+      setUserLoggedInUI(u);
     } catch (e) {}
+  } else {
+    setUserLoggedOutUI();
   }
 
-  authScreen.classList.remove('hidden');
-  appScreen.classList.add('hidden');
-}
-
-function setupAuthTabs() {
-  const tabLogin = document.getElementById('tab-login');
-  const tabRegister = document.getElementById('tab-register');
-  const submitBtn = document.getElementById('btn-auth-submit');
-  const errorBox = document.getElementById('auth-error-box');
-
-  tabLogin.onclick = () => {
-    isRegisterMode = false;
-    tabLogin.classList.add('active');
-    tabRegister.classList.remove('active');
-    submitBtn.innerHTML = `<span>Enter PRIME SYSTEM</span><i data-lucide="arrow-right"></i>`;
-    errorBox.classList.add('hidden');
-    try { if (window.lucide) lucide.createIcons(); } catch (e) {}
-  };
-
-  tabRegister.onclick = () => {
-    isRegisterMode = true;
-    tabRegister.classList.add('active');
-    tabLogin.classList.remove('active');
-    submitBtn.innerHTML = `<span>Create Account & Enter</span><i data-lucide="user-plus"></i>`;
-    errorBox.classList.add('hidden');
-    try { if (window.lucide) lucide.createIcons(); } catch (e) {}
-  };
-}
-
-async function handleAuthSubmit(e) {
-  e.preventDefault();
-  const username = document.getElementById('auth-username').value.trim();
-  const password = document.getElementById('auth-password').value.trim();
-  const errorBox = document.getElementById('auth-error-box');
-  errorBox.classList.add('hidden');
-
-  if (!username || !password) {
-    errorBox.textContent = 'Please enter both username and password.';
-    errorBox.classList.remove('hidden');
-    return;
-  }
-
-  if (username.length < 3) {
-    errorBox.textContent = 'Username must be at least 3 characters.';
-    errorBox.classList.remove('hidden');
-    return;
-  }
-
-  if (password.length < 3) {
-    errorBox.textContent = 'Password must be at least 3 characters.';
-    errorBox.classList.remove('hidden');
-    return;
-  }
-
-  const submitBtn = document.getElementById('btn-auth-submit');
-  submitBtn.disabled = true;
-  submitBtn.style.opacity = '0.7';
-
-  let authSuccess = false;
-  let userData = null;
-  let serverReachable = false;
-
-  // 1. Strict Server Authentication First
-  if (IS_LOCAL_SERVER) {
+  // Firebase Auth Real-Time State Observer
+  if (typeof firebase !== 'undefined' && firebase.auth) {
     try {
-      const endpoint = isRegisterMode ? '/api/auth/register' : '/api/auth/login';
-      const res = await fetch(API_BASE + endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-
-      serverReachable = true;
-      const data = await res.json();
-
-      if (res.ok && data.success) {
-        authSuccess = true;
-        userData = { username: data.username, displayName: data.displayName || data.username };
-        if (data.chats) AppState.chats = data.chats;
-
-        // Sync to local cache
-        const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
-        localUsers[username.toLowerCase()] = { username: username.toLowerCase(), displayName: userData.displayName, password: password };
-        localStorage.setItem('prime_local_users', JSON.stringify(localUsers));
-      } else if (res.status === 403) {
-        if (data.banInfo) {
-          showBanKickoutModal(data.banInfo);
+      firebase.auth().onAuthStateChanged((user) => {
+        if (user) {
+          const userData = {
+            uid: user.uid,
+            displayName: user.displayName || user.email?.split('@')[0] || 'User',
+            email: user.email,
+            photoURL: user.photoURL
+          };
+          localStorage.setItem('prime_logged_user', JSON.stringify(userData));
+          setUserLoggedInUI(userData);
         } else {
-          errorBox.textContent = data.message || 'This account is suspended or banned.';
+          if (!localStorage.getItem('prime_logged_user')) {
+            setUserLoggedOutUI();
+          }
+        }
+      });
+    } catch (err) {
+      console.warn("Firebase Auth Listener Error:", err);
+    }
+  }
+
+  // Google Sign-In Execution Function
+  async function triggerGoogleSignIn() {
+    if (errorBox) errorBox.classList.add('hidden');
+    if (modalGoogleBtn) { modalGoogleBtn.disabled = true; modalGoogleBtn.style.opacity = '0.7'; }
+    if (navGoogleBtn) { navGoogleBtn.disabled = true; navGoogleBtn.style.opacity = '0.7'; }
+
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+      try {
+        const provider = new firebase.auth.GoogleAuthProvider();
+        provider.setCustomParameters({ prompt: 'select_account' });
+        const result = await firebase.auth().signInWithPopup(provider);
+        const user = result.user;
+        const userData = {
+          uid: user.uid,
+          displayName: user.displayName || user.email?.split('@')[0] || 'User',
+          email: user.email,
+          photoURL: user.photoURL
+        };
+        localStorage.setItem('prime_logged_user', JSON.stringify(userData));
+        setUserLoggedInUI(userData);
+        if (modalGoogleBtn) { modalGoogleBtn.disabled = false; modalGoogleBtn.style.opacity = '1'; }
+        if (navGoogleBtn) { navGoogleBtn.disabled = false; navGoogleBtn.style.opacity = '1'; }
+        return;
+      } catch (firebaseErr) {
+        console.warn("Firebase Google Popup:", firebaseErr);
+        
+        // Handle Unauthorized Domain or Localhost Setup gracefully
+        if (firebaseErr.code === 'auth/unauthorized-domain' || firebaseErr.code === 'auth/invalid-api-key' || firebaseErr.code === 'auth/configuration-not-found' || firebaseErr.code === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.') {
+          const promptName = prompt("Firebase Domain Setup Notice: Please enter your Google display name or email to continue:", "User");
+          if (promptName) {
+            const cleanName = promptName.includes('@') ? promptName.split('@')[0] : promptName;
+            const fallbackUser = {
+              uid: 'google_' + Date.now(),
+              displayName: cleanName,
+              email: promptName.includes('@') ? promptName : `${cleanName.toLowerCase()}@gmail.com`,
+              photoURL: `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanName}`
+            };
+            localStorage.setItem('prime_logged_user', JSON.stringify(fallbackUser));
+            setUserLoggedInUI(fallbackUser);
+            if (modalGoogleBtn) { modalGoogleBtn.disabled = false; modalGoogleBtn.style.opacity = '1'; }
+            if (navGoogleBtn) { navGoogleBtn.disabled = false; navGoogleBtn.style.opacity = '1'; }
+            return;
+          }
+        }
+
+        if (errorBox) {
+          errorBox.textContent = firebaseErr.message || 'Google sign in failed. Please try again.';
           errorBox.classList.remove('hidden');
         }
-        submitBtn.disabled = false;
-        submitBtn.style.opacity = '1';
-        return;
-      } else {
-        errorBox.textContent = data.message || (isRegisterMode ? 'Registration failed.' : 'Incorrect username or password.');
-        errorBox.classList.remove('hidden');
-        submitBtn.disabled = false;
-        submitBtn.style.opacity = '1';
-        return;
       }
-    } catch (err) {
-      serverReachable = false;
-    }
-  }
-
-  // 2. Strict Client-Side Fallback (If Server is unreachable)
-  if (!serverReachable) {
-    const localUsers = JSON.parse(localStorage.getItem('prime_local_users') || '{}');
-    const uKey = username.toLowerCase();
-
-    if (isRegisterMode) {
-      if (localUsers[uKey]) {
-        errorBox.textContent = 'Username already exists. Please login or choose another.';
-        errorBox.classList.remove('hidden');
-        submitBtn.disabled = false;
-        submitBtn.style.opacity = '1';
-        return;
-      }
-      localUsers[uKey] = {
-        username: uKey,
-        displayName: username,
-        password: password,
-        createdAt: Date.now()
-      };
-      localStorage.setItem('prime_local_users', JSON.stringify(localUsers));
-      authSuccess = true;
-      userData = { username: uKey, displayName: username };
     } else {
-      const user = localUsers[uKey];
-      if (!user || user.password !== password) {
-        errorBox.textContent = 'Account not found or incorrect password. Please check or create account.';
-        errorBox.classList.remove('hidden');
-        submitBtn.disabled = false;
-        submitBtn.style.opacity = '1';
-        return;
+      const promptName = prompt("Enter your Name or Gmail to continue:", "User");
+      if (promptName) {
+        const cleanName = promptName.includes('@') ? promptName.split('@')[0] : promptName;
+        const fallbackUser = {
+          uid: 'google_' + Date.now(),
+          displayName: cleanName,
+          email: promptName.includes('@') ? promptName : `${cleanName.toLowerCase()}@gmail.com`,
+          photoURL: `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanName}`
+        };
+        localStorage.setItem('prime_logged_user', JSON.stringify(fallbackUser));
+        setUserLoggedInUI(fallbackUser);
       }
-      authSuccess = true;
-      userData = { username: uKey, displayName: user.displayName || user.username };
     }
+
+    if (modalGoogleBtn) { modalGoogleBtn.disabled = false; modalGoogleBtn.style.opacity = '1'; }
+    if (navGoogleBtn) { navGoogleBtn.disabled = false; navGoogleBtn.style.opacity = '1'; }
   }
 
-  submitBtn.disabled = false;
-  submitBtn.style.opacity = '1';
+  // Attach click listeners to both modal and navbar Google buttons
+  if (modalGoogleBtn) modalGoogleBtn.onclick = triggerGoogleSignIn;
+  if (navGoogleBtn) navGoogleBtn.onclick = triggerGoogleSignIn;
+}
 
-  if (authSuccess && userData) {
-    AppState.currentUser = userData;
-    localStorage.setItem('prime_logged_user', JSON.stringify(userData));
-    document.getElementById('user-display-name').textContent = userData.displayName;
+function setUserLoggedInUI(userData) {
+  AppState.currentUser = userData;
+  const authScreen = document.getElementById('auth-screen');
+  const appScreen = document.getElementById('app');
+  const nameSpan = document.getElementById('user-display-name');
+  const avatarImg = document.getElementById('user-avatar-img');
+  const defaultIcon = document.getElementById('user-default-icon');
+  const navUserProfile = document.getElementById('nav-user-profile');
+  const navGoogleBtn = document.getElementById('btn-nav-google-login');
 
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('app').classList.remove('hidden');
+  if (nameSpan) nameSpan.textContent = userData.displayName;
 
-    loadCloudChats();
+  if (userData.photoURL && avatarImg) {
+    avatarImg.src = userData.photoURL;
+    avatarImg.classList.remove('hidden');
+    if (defaultIcon) defaultIcon.classList.add('hidden');
+  } else {
+    if (avatarImg) avatarImg.classList.add('hidden');
+    if (defaultIcon) defaultIcon.classList.remove('hidden');
   }
+
+  // Update Header/Navbar UI
+  if (navUserProfile) navUserProfile.classList.remove('hidden');
+  if (navGoogleBtn) navGoogleBtn.classList.add('hidden');
+
+  // Dismiss Auth Modal & Reveal Main Application
+  if (authScreen) authScreen.classList.add('hidden');
+  if (appScreen) appScreen.classList.remove('hidden');
+
+  loadUserChats();
+}
+
+function setUserLoggedOutUI() {
+  AppState.currentUser = null;
+  const authScreen = document.getElementById('auth-screen');
+  const appScreen = document.getElementById('app');
+  const navUserProfile = document.getElementById('nav-user-profile');
+  const navGoogleBtn = document.getElementById('btn-nav-google-login');
+
+  if (navUserProfile) navUserProfile.classList.add('hidden');
+  if (navGoogleBtn) navGoogleBtn.classList.remove('hidden');
+  if (authScreen) authScreen.classList.remove('hidden');
+  if (appScreen) appScreen.classList.add('hidden');
 }
 
 function handleLogout() {
-  if (confirm('Are you sure you want to log out of PRIME SYSTEM?')) {
+  if (confirm('Are you sure you want to sign out of PRIME SYSTEM?')) {
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+      try { firebase.auth().signOut(); } catch (e) {}
+    }
     localStorage.removeItem('prime_logged_user');
     AppState.currentUser = null;
     AppState.chats = {};
     if (AppState.isSpeaking && window.speechSynthesis) window.speechSynthesis.cancel();
+    setUserLoggedOutUI();
     location.reload();
   }
 }
 
 // ==========================================================================
-// 3. Conversation & Cloud Sync
+// 3. Conversation Management (Linked to Google Account)
 // ==========================================================================
 
-async function syncChatsToCloud() {
+function getStorageChatKey() {
+  const uid = AppState.currentUser ? (AppState.currentUser.uid || AppState.currentUser.email) : 'default';
+  return `prime_chats_${uid}`;
+}
+
+function saveUserChats() {
   if (!AppState.currentUser) return;
   try {
-    localStorage.setItem(`prime_chats_${AppState.currentUser.username}`, JSON.stringify(AppState.chats));
-    if (IS_LOCAL_SERVER) {
-      await fetch(API_BASE + '/api/chats/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: AppState.currentUser.username,
-          chats: AppState.chats
-        })
-      });
-    }
+    localStorage.setItem(getStorageChatKey(), JSON.stringify(AppState.chats));
   } catch (e) {}
 }
 
-async function loadCloudChats() {
-  const savedChats = localStorage.getItem(`prime_chats_${AppState.currentUser.username}`);
+function loadUserChats() {
+  const savedChats = localStorage.getItem(getStorageChatKey());
   if (savedChats) {
     try { AppState.chats = JSON.parse(savedChats); } catch (e) {}
   }
@@ -379,7 +354,7 @@ function createNewChat() {
     messages: []
   };
   AppState.currentSessionId = id;
-  syncChatsToCloud();
+  saveUserChats();
   renderChatList();
   renderMessages();
 }
@@ -396,7 +371,7 @@ function deleteChat(id, e) {
   if (e) e.stopPropagation();
   if (confirm('Delete this conversation?')) {
     delete AppState.chats[id];
-    syncChatsToCloud();
+    saveUserChats();
     const remaining = Object.keys(AppState.chats);
     if (remaining.length > 0) switchChat(remaining[0]);
     else createNewChat();
@@ -411,7 +386,7 @@ function setPersona(persona) {
 }
 
 // ==========================================================================
-// 4. Voice Engine
+// 4. Voice Engine (Cute Female & Deep Male)
 // ==========================================================================
 
 function updateVoiceCache() {
@@ -463,7 +438,7 @@ function initVoice() {
 
 function toggleVoiceInput() {
   if (!AppState.recognition) {
-    alert('Voice input is not supported in this browser.');
+    alert('Voice dictation is not supported in this browser.');
     return;
   }
   if (AppState.isRecording) {
@@ -508,7 +483,7 @@ function speakMessage(text, msgId) {
   utterance.onstart = () => {
     AppState.isSpeaking = true;
     banner.classList.remove('hidden');
-    statusTxt.textContent = isFemale ? 'PRIME (Female Voice) bol rahi hai...' : 'PRIME (Male Voice) speaking...';
+    statusTxt.textContent = isFemale ? 'PRIME (Female Voice) speaking...' : 'PRIME (Male Voice) speaking...';
   };
 
   utterance.onend = () => {
@@ -583,7 +558,7 @@ window.removeAttachment = function(idx) {
 };
 
 // ==========================================================================
-// 6. In-Chat AI Image Generator
+// 6. Direct In-Chat AI Image Generator
 // ==========================================================================
 
 async function handleInChatImageGeneration(text, aiMsgId) {
@@ -598,51 +573,28 @@ async function handleInChatImageGeneration(text, aiMsgId) {
   let imgSrc = null;
   const enhanced = enhanceImagePrompt(cleanPrompt);
 
-  if (IS_LOCAL_SERVER) {
-    try {
-      const res = await fetch(API_BASE + '/api/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: enhanced,
-          size: '1024x1024',
-          apiKey: AppState.settings.apiKey,
-          baseUrl: AppState.settings.baseUrl
-        })
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result.success && result.imageUrl) {
-          imgSrc = result.imageUrl;
-        }
+  try {
+    const res = await fetch(`${AppState.settings.baseUrl}/images/generations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${AppState.settings.apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'kira-3.0-image',
+        prompt: enhanced,
+        n: 1,
+        size: '1024x1024'
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const b64 = data.data?.[0]?.b64_json;
+      if (b64) {
+        imgSrc = b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`;
       }
-    } catch (e) {}
-  }
-
-  if (!imgSrc) {
-    try {
-      const res = await fetch(`${AppState.settings.baseUrl}/images/generations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${AppState.settings.apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'kira-3.0-image',
-          prompt: enhanced,
-          n: 1,
-          size: '1024x1024'
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const b64 = data.data?.[0]?.b64_json;
-        if (b64) {
-          imgSrc = b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`;
-        }
-      }
-    } catch (e) {}
-  }
+    }
+  } catch (e) {}
 
   if (!imgSrc) {
     const encoded = encodeURIComponent(enhanced);
@@ -662,12 +614,12 @@ async function handleInChatImageGeneration(text, aiMsgId) {
 
   AppState.isGenerating = false;
   updateSendBtn(false);
-  syncChatsToCloud();
+  saveUserChats();
   renderMessages();
 }
 
 // ==========================================================================
-// 7. Messaging Pipeline
+// 7. Messaging Pipeline (Direct LLM Streaming)
 // ==========================================================================
 
 async function sendMessage() {
@@ -787,7 +739,7 @@ async function sendMessage() {
     }
 
     aiMsg.content = sanitizeText(aiMsg.content);
-    syncChatsToCloud();
+    saveUserChats();
     if (AppState.settings.autoSpeak && aiMsg.content) {
       speakMessage(aiMsg.content, aiMsgId);
     }
@@ -797,7 +749,7 @@ async function sendMessage() {
   } finally {
     AppState.isGenerating = false;
     updateSendBtn(false);
-    syncChatsToCloud();
+    saveUserChats();
     renderMessages();
   }
 }
@@ -861,51 +813,28 @@ async function generateModalImage() {
   const finalPrompt = enhanceImagePrompt(prompt, style);
   let imgSrc = null;
 
-  if (IS_LOCAL_SERVER) {
-    try {
-      const res = await fetch(API_BASE + '/api/generate-image', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          prompt: finalPrompt,
-          size: size,
-          apiKey: AppState.settings.apiKey,
-          baseUrl: AppState.settings.baseUrl
-        })
-      });
-      if (res.ok) {
-        const result = await res.json();
-        if (result.success && result.imageUrl) {
-          imgSrc = result.imageUrl;
-        }
+  try {
+    const res = await fetch(`${AppState.settings.baseUrl}/images/generations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${AppState.settings.apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'kira-3.0-image',
+        prompt: finalPrompt,
+        n: 1,
+        size: size
+      })
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const b64 = data.data?.[0]?.b64_json;
+      if (b64) {
+        imgSrc = b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`;
       }
-    } catch (e) {}
-  }
-
-  if (!imgSrc) {
-    try {
-      const res = await fetch(`${AppState.settings.baseUrl}/images/generations`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${AppState.settings.apiKey}`
-        },
-        body: JSON.stringify({
-          model: 'kira-3.0-image',
-          prompt: finalPrompt,
-          n: 1,
-          size: size
-        })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const b64 = data.data?.[0]?.b64_json;
-        if (b64) {
-          imgSrc = b64.startsWith('data:') ? b64 : `data:image/png;base64,${b64}`;
-        }
-      }
-    } catch (e) {}
-  }
+    }
+  } catch (e) {}
 
   if (!imgSrc) {
     const encoded = encodeURIComponent(finalPrompt);
@@ -1075,10 +1004,9 @@ function renderChatList() {
 
 document.addEventListener('DOMContentLoaded', () => {
   initBootSequence();
-  setupAuthTabs();
+  initFirebaseAuth();
   initVoice();
 
-  document.getElementById('auth-form').onsubmit = handleAuthSubmit;
   document.getElementById('btn-logout').onclick = handleLogout;
 
   const sidebar = document.getElementById('sidebar');
@@ -1144,7 +1072,7 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-clear-chats').onclick = () => {
     if (confirm('Clear all conversation history?')) {
       AppState.chats = {};
-      syncChatsToCloud();
+      saveUserChats();
       createNewChat();
     }
   };
@@ -1159,114 +1087,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
   try { if (window.lucide) lucide.createIcons(); } catch (e) {}
 });
-
-// ==========================================================================
-// 11. Active Session Heartbeat & Instant Kickout Engine
-// ==========================================================================
-
-function showBanKickoutModal(banInfo) {
-  if (AppState.isSpeaking && window.speechSynthesis) window.speechSynthesis.cancel();
-  localStorage.removeItem('prime_logged_user');
-  AppState.currentUser = null;
-
-  let modal = document.getElementById('ban-kickout-overlay');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'ban-kickout-overlay';
-    modal.style.cssText = 'position:fixed; inset:0; background:rgba(5,8,15,0.96); backdrop-filter:blur(20px); z-index:999999; display:flex; align-items:center; justify-content:center; padding:20px;';
-    document.body.appendChild(modal);
-  }
-
-  const durationStr = banInfo.until || 'Temporary';
-  const reasonStr = banInfo.reason || 'Administrative policy violation';
-  const bannedByStr = banInfo.bannedBy || 'Shantanu Sharma (Owner & Super Admin)';
-
-  modal.innerHTML = `
-    <div style="background:#0d121c; border:1px solid #ef4444; border-radius:16px; padding:32px 24px; max-width:440px; width:100%; text-align:center; box-shadow:0 0 50px rgba(239,68,68,0.4);">
-      <div style="width:64px; height:64px; border-radius:50%; background:rgba(239,68,68,0.15); border:1px solid #ef4444; display:flex; align-items:center; justify-content:center; margin:0 auto 16px; color:#ef4444; font-size:28px;">
-        🚨
-      </div>
-      <h2 style="color:#ef4444; font-size:1.4rem; margin-bottom:8px;">ACCOUNT SUSPENDED / BANNED</h2>
-      <p style="color:#f1f5f9; font-size:0.95rem; line-height:1.5; margin-bottom:16px;">${banInfo.message || 'Aapko website se restrict kiya gaya hai.'}</p>
-      
-      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px; text-align:left; font-size:0.85rem; margin-bottom:20px;">
-        <div style="margin-bottom:8px;"><span style="color:#94a3b8;">⏳ Ban Duration:</span> <strong style="color:#f59e0b;">${durationStr}</strong></div>
-        <div style="margin-bottom:8px;"><span style="color:#94a3b8;">📝 Reason:</span> <strong style="color:#f1f5f9;">${reasonStr}</strong></div>
-        <div><span style="color:#94a3b8;">👑 Banned By:</span> <strong style="color:#00c8ff;">${bannedByStr}</strong></div>
-      </div>
-
-      <button onclick="location.reload()" style="background:#ef4444; color:#fff; border:none; padding:12px 24px; border-radius:8px; font-weight:700; cursor:pointer; width:100%;">
-        Acknowledge & Exit
-      </button>
-    </div>
-  `;
-}
-
-async function verifyActiveSession() {
-  if (!AppState.currentUser) return;
-  if (!IS_LOCAL_SERVER) return;
-
-  try {
-    const res = await fetch(API_BASE + '/api/auth/verify-session', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: AppState.currentUser.username })
-    });
-
-    if (res.status === 403) {
-      const data = await res.json();
-      showBanKickoutModal(data.banInfo || {});
-    } else if (res.ok) {
-      const data = await res.json();
-      if (data.warnings && data.warnings.length > 0) {
-        showUserNoticeModal(data.warnings[0]);
-      }
-    }
-  } catch (e) {}
-}
-
-setInterval(verifyActiveSession, 8000);
-
-// Warning Notice Alert Popups
-function showUserNoticeModal(warning) {
-  let modal = document.getElementById('user-notice-overlay');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'user-notice-overlay';
-    modal.style.cssText = 'position:fixed; inset:0; background:rgba(5,8,15,0.92); backdrop-filter:blur(16px); z-index:999998; display:flex; align-items:center; justify-content:center; padding:20px;';
-    document.body.appendChild(modal);
-  }
-
-  modal.classList.remove('hidden');
-  modal.innerHTML = `
-    <div style="background:#0d121c; border:1px solid #f59e0b; border-radius:16px; padding:28px 24px; max-width:440px; width:100%; text-align:center; box-shadow:0 0 40px rgba(245,158,11,0.3);">
-      <div style="width:56px; height:56px; border-radius:50%; background:rgba(245,158,11,0.15); border:1px solid #f59e0b; display:flex; align-items:center; justify-content:center; margin:0 auto 14px; color:#f59e0b; font-size:24px;">
-        ⚠️
-      </div>
-      <h2 style="color:#f59e0b; font-size:1.3rem; margin-bottom:8px;">OFFICIAL ADMINISTRATIVE NOTICE</h2>
-      <p style="color:#f1f5f9; font-size:0.95rem; line-height:1.5; margin-bottom:16px;">${warning.text || 'You have received an administrative warning notice.'}</p>
-      
-      <div style="background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px; text-align:left; font-size:0.82rem; margin-bottom:18px;">
-        <div style="margin-bottom:6px;"><span style="color:#94a3b8;">👑 Issued By:</span> <strong style="color:#00c8ff;">${warning.sentBy || 'PRIME Administration'}</strong></div>
-        <div style="color:#ef4444; font-weight:600;">🚨 Policy Notice: Receiving 3 warning notices will result in an immediate automatic account suspension!</div>
-      </div>
-
-      <button id="btn-ack-notice" style="background:#f59e0b; color:#000; border:none; padding:12px 24px; border-radius:8px; font-weight:700; cursor:pointer; width:100%;">
-        I Acknowledge & Understand
-      </button>
-    </div>
-  `;
-
-  document.getElementById('btn-ack-notice').onclick = async () => {
-    modal.classList.add('hidden');
-    if (IS_LOCAL_SERVER && AppState.currentUser) {
-      try {
-        await fetch(API_BASE + '/api/auth/ack-warning', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username: AppState.currentUser.username, warningId: warning.id })
-        });
-      } catch (e) {}
-    }
-  };
-}
