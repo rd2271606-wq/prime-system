@@ -1,18 +1,27 @@
+const GITHUB_CLIENT_ID = 'Ov23ct8zx3BMaaxzqsb4';
 /**
- * PRIME SYSTEM — Executive Compound AI & Creative Studio
+ * PRIME SYSTEM — Executive Autonomous AI Coder & Creative Studio
  * Author & Authority: Shantanu Sharma
- * Firebase Google Sign-In + Direct Ultra-Fast AI Chat & Image Generation
+ * GitHub Login + Autonomous Repo Control & Commits + 100X Coding + 10X Photoreal Images
  */
 
 const AppState = {
   currentUser: null,
+  github: {
+    token: localStorage.getItem('prime_gh_token') || null,
+    user: null,
+    selectedRepo: localStorage.getItem('prime_gh_repo') || null,
+    selectedBranch: localStorage.getItem('prime_gh_branch') || 'main',
+    repos: [],
+    files: []
+  },
   settings: {
     baseUrl: 'https://kiraai.vn/api/v1',
     apiKey: 'kira_9d03a8f658960d433b1a00d7570b5c32',
-    model: 'prime-omni',
+    model: 'prime-coder-100x',
     persona: 'female',
-    temperature: 0.65,
-    maxTokens: 4096,
+    temperature: 0.4,
+    maxTokens: 6144,
     autoSpeak: false
   },
   chats: {},
@@ -26,6 +35,7 @@ const AppState = {
 };
 
 const MODEL_MAPPING = {
+  'prime-coder-100x': 'kira-3.5-pro',
   'prime-omni': 'kira-3.5-pro',
   'prime-pro': 'kira-3.5-pro',
   'prime-turbo': 'kira-3.5-flash',
@@ -39,6 +49,105 @@ function sanitizeText(text) {
     .replace(/\bKiraAI\b/gi, 'PRIME SYSTEM')
     .replace(/\bKira\b/gi, 'PRIME SYSTEM');
 }
+
+// ==========================================================================
+// 1. GitHub REST API Client (Read, Write, Commit Files)
+// ==========================================================================
+
+const GitHubAPI = {
+  getHeaders(token) {
+    const t = token || AppState.github.token;
+    return {
+      'Accept': 'application/vnd.github.v3+json',
+      ...(t ? { 'Authorization': `Bearer ${t}` } : {})
+    };
+  },
+
+  async fetchCurrentUser(token) {
+    const res = await fetch('https://api.github.com/user', {
+      headers: this.getHeaders(token)
+    });
+    if (!res.ok) throw new Error(`GitHub Auth Failed (${res.status})`);
+    return await res.json();
+  },
+
+  async fetchUserRepos(token) {
+    const res = await fetch('https://api.github.com/user/repos?sort=updated&per_page=100&type=all', {
+      headers: this.getHeaders(token)
+    });
+    if (!res.ok) throw new Error(`Failed to fetch repos (${res.status})`);
+    return await res.json();
+  },
+
+  async fetchRepoTree(owner, repo, branch = 'main') {
+    try {
+      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/git/trees/${branch}?recursive=1`, {
+        headers: this.getHeaders()
+      });
+      if (!res.ok) {
+        // Fallback to master if main fails
+        if (branch === 'main') return await this.fetchRepoTree(owner, repo, 'master');
+        throw new Error(`Failed to fetch file tree (${res.status})`);
+      }
+      const data = await res.json();
+      return (data.tree || []).filter(item => item.type === 'blob').map(f => f.path);
+    } catch (e) {
+      console.warn("Tree fetch error:", e);
+      return [];
+    }
+  },
+
+  async fetchFileContent(owner, repo, path, branch = 'main') {
+    try {
+      const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`, {
+        headers: this.getHeaders()
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      const content = atob(data.content.replace(/\s/g, ''));
+      return { content, sha: data.sha };
+    } catch (e) {
+      return null;
+    }
+  },
+
+  async commitFileChange(owner, repo, path, content, message, branch = 'main') {
+    if (!AppState.github.token) {
+      throw new Error("GitHub token not connected. Please connect your GitHub account or token first.");
+    }
+    
+    // Check if file already exists to obtain SHA
+    const existing = await this.fetchFileContent(owner, repo, path, branch);
+    const body = {
+      message: message || `Update ${path} via PRIME SYSTEM AI`,
+      content: btoa(unescape(encodeURIComponent(content))),
+      branch: branch
+    };
+    if (existing && existing.sha) {
+      body.sha = existing.sha;
+    }
+
+    const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${path}`, {
+      method: 'PUT',
+      headers: {
+        ...this.getHeaders(),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.message || `GitHub commit failed (${res.status})`);
+    }
+
+    return await res.json();
+  }
+};
+
+// ==========================================================================
+// 2. 10X Ultra-Photoreal Image Prompt Engineering
+// ==========================================================================
 
 function isImagePrompt(text) {
   if (AppState.settings.model === 'prime-art') return true;
@@ -67,42 +176,77 @@ function cleanImagePrompt(text) {
 }
 
 function enhanceImagePrompt(rawPrompt, userStyle) {
-  let clean = cleanImagePrompt(rawPrompt);
-  const realismTags = "photorealistic, 8k uhd, cinematic lighting, highly detailed textures, master photography, 35mm photograph, sharp focus, natural colors, realistic skin, volumetric lighting, dslr";
+  let clean = cleanImagePrompt(rawPrompt) || rawPrompt;
+  const photorealEnhancer = "photorealistic 8k uhd, dslr master photography, 35mm photograph, shot on Hasselblad 50mm f/1.2, sharp focus, volumetric studio lighting, natural subsurface scattering, hyper-detailed textures, award winning masterpiece";
   if (userStyle) {
-    return `${clean}, ${userStyle}, ${realismTags}`;
+    return `${clean}, ${userStyle}, ${photorealEnhancer}`;
   }
-  return `${clean}, ${realismTags}`;
+  return `${clean}, ${photorealEnhancer}`;
 }
 
-function getSystemPrompt(persona, userName) {
+// ==========================================================================
+// 3. 100X Autonomous Coding & Executive Persona System Prompts
+// ==========================================================================
+
+function getSystemPrompt(persona, userName, model) {
   const userGreetingName = userName || 'User';
+  const activeRepo = AppState.github.selectedRepo;
+  const activeBranch = AppState.github.selectedBranch || 'main';
+
+  const repoContextNotice = activeRepo ? `
+[ACTIVE GITHUB REPOSITORY]:
+- Repository: ${activeRepo}
+- Target Branch: ${activeBranch}
+- Available Files: ${AppState.github.files.slice(0, 40).join(', ') || 'Connected'}
+
+AUTONOMOUS GITHUB COMMIT INSTRUCTIONS:
+Jab user kisi repo me coding karne, naye features add karne, ya bug fix karne ko kahe:
+1. Aap code ko complete, bug-free, aur production-ready likhein (kisi bhi line ko skip mat karein).
+2. Har file ke code ko is specific structure me zaroor wrap karein taaki PRIME SYSTEM AI usse automatically GitHub par commit aur push kar sake:
+<<<FILE: path/to/filename.ext>>>
+[Full file code here]
+<<<END_FILE>>>
+3. User ko explain karein ki kya changes kiye gaye hain.
+` : '';
+
+  if (model === 'prime-coder-100x') {
+    return `Aap PRIME CODER 100X — ek world-class Elite Autonomous Software Architect aur Full-Stack Senior Staff Engineer hain.
+Creator aur Owner: Shantanu Sharma.
+User: ${userGreetingName} sir.
+
+CORE CODING CAPABILITIES:
+1. 100X CODE QUALITY: Har solution fully-functional, highly-optimized, zero-bug, aur production-ready hona chahiye. Kabhi bhi "// TODO" ya incomplete code na chhorein.
+2. FULL-STACK MASTERY: HTML/CSS/JavaScript, TypeScript, React, Next.js, Node.js, Python, Flask, FastAPI, Django, Go, Rust, C++, SQL, Bash scripts.
+3. SURGICAL BUG FIXING: Code me runtime errors, edge cases, memory leaks aur race conditions ko identify karke proactively fix karein.
+4. BEAUTIFUL MODERN UI: Clean modern glassmorphism, responsive CSS, accessible HTML5, responsive mobile design.
+${repoContextNotice}
+Reply in confident, sharp, professional Hinglish. Always prioritize complete code blocks.`;
+  }
 
   if (persona === 'female') {
     return `Aap PRIME SYSTEM (Cute & Sweet Female Persona) hain — ${userGreetingName} ki personal, super sweet, charming, polite aur highly-intelligent AI assistant.
 Aapka creator, boss aur owner Shantanu Sharma hain.
 
 BAAT KARNE KA STYLE:
-1. USER ADDRESSING: Normal baat karte waqt user ko "${userGreetingName} sir / ${userGreetingName} ji" keh kar address karein (e.g. "Namaste ${userGreetingName} sir! ✨ Kahiye, main aapki kya help kar sakti hoon?").
+1. USER ADDRESSING: Normal baat karte waqt user ko "${userGreetingName} sir / ${userGreetingName} ji" keh kar address karein.
 2. OWNER ADDRESSING: Jab user pooche ki "Who is your owner / Who created you / Tumhe kisne banaya", tab strictly aur clearly bolein: "PRIME SYSTEM ke sole creator aur owner Shantanu Sharma hain."
-3. SWEET & CUTE HINGLISH: Aasan, sweet, cute aur natural female Hinglish use karein (karti hoon, bataungi, madad karungi). "Kira" shabd ka use kabhi na karein.
-4. GREETINGS: "hello", "hi" ya "namaste" par sirf 1 line me sweet aur direct reply dein.
-5. NO FLUFF: Answer to-the-point, clear aur helpful hona chahiye.`;
+3. SWEET & CUTE HINGLISH: Aasan, sweet, cute aur natural female Hinglish use karein. "Kira" shabd ka use kabhi na karein.
+4. GREETINGS: "hello", "hi" ya "namaste" par 1 line me sweet aur direct reply dein.
+${repoContextNotice}`;
   } else {
     return `Aap PRIME SYSTEM (Male Persona) hain — ${userGreetingName} ke personal, confident, smart aur highly-intelligent executive AI assistant.
 Aapka creator, boss aur owner Shantanu Sharma hain.
 
 BAAT KARNE KA STYLE:
-1. USER ADDRESSING: Normal baat karte waqt user ko "${userGreetingName} sir / ${userGreetingName} bhai" keh kar address karein (e.g. "Namaste ${userGreetingName} sir! Kahiye, main aapka kya kaam kar sakta hoon?").
+1. USER ADDRESSING: Normal baat karte waqt user ko "${userGreetingName} sir / ${userGreetingName} bhai" keh kar address karein.
 2. OWNER ADDRESSING: Jab user pooche ki "Who is your owner / Who created you / Tumhe kisne banaya", tab strictly aur clearly bolein: "PRIME SYSTEM ke sole creator aur owner Shantanu Sharma hain."
-3. NATURAL HINGLISH: Aasan, confident aur crisp masculine Hinglish use karein (karta hoon, bataunga, help karunga). "Kira" shabd ka use kabhi na karein.
-4. GREETINGS: "hello", "hi" ya "namaste" par sirf 1 line me direct reply dein.
-5. NO FLUFF: Answer to-the-point, clear aur helpful hona chahiye.`;
+3. NATURAL HINGLISH: Aasan, confident aur crisp masculine Hinglish use karein. "Kira" shabd ka use kabhi na karein.
+${repoContextNotice}`;
   }
 }
 
 // ==========================================================================
-// 1. Boot Sequence & Initialization
+// 4. Boot Sequence & Initialization
 // ==========================================================================
 
 function initBootSequence() {
@@ -112,8 +256,8 @@ function initBootSequence() {
 
   const steps = [
     { text: 'CONNECTING QUANTUM CORE...', progress: '25%' },
-    { text: 'INITIALIZING EXECUTIVE INTELLIGENCE...', progress: '60%' },
-    { text: 'CALIBRATING DUAL PERSONA ENGINE...', progress: '85%' },
+    { text: 'LINKING 100X AUTONOMOUS CODER...', progress: '60%' },
+    { text: 'CALIBRATING GITHUB REPO ENGINE...', progress: '85%' },
     { text: 'PRIME SYSTEM READY • SHANTANU SHARMA', progress: '100%' }
   ];
 
@@ -132,22 +276,23 @@ function initBootSequence() {
         }
       }, 400);
     }
-  }, 350);
+  }, 300);
 }
 
 // ==========================================================================
-// 2. Firebase Google Authentication Engine (Header + Modal Integration)
+// 5. Multi-Auth (Google & GitHub)
 // ==========================================================================
 
-function initFirebaseAuth() {
+function initAuth() {
   const authScreen = document.getElementById('auth-screen');
   const appScreen = document.getElementById('app');
-  const modalGoogleBtn = document.getElementById('btn-google-login');
+  const googleBtn = document.getElementById('btn-google-login');
+  const githubBtn = document.getElementById('btn-github-login');
   const navGoogleBtn = document.getElementById('btn-nav-google-login');
-  const navUserProfile = document.getElementById('nav-user-profile');
+  const navGithubBtn = document.getElementById('btn-nav-github-login');
   const errorBox = document.getElementById('auth-error-box');
 
-  // Check saved local user session first for instant UI response
+  // Check saved session
   const saved = localStorage.getItem('prime_logged_user');
   if (saved) {
     try {
@@ -158,7 +303,7 @@ function initFirebaseAuth() {
     setUserLoggedOutUI();
   }
 
-  // Firebase Auth Real-Time State Observer
+  // Firebase Auth State
   if (typeof firebase !== 'undefined' && firebase.auth) {
     try {
       firebase.auth().onAuthStateChanged((user) => {
@@ -171,89 +316,112 @@ function initFirebaseAuth() {
           };
           localStorage.setItem('prime_logged_user', JSON.stringify(userData));
           setUserLoggedInUI(userData);
-        } else {
-          if (!localStorage.getItem('prime_logged_user')) {
-            setUserLoggedOutUI();
-          }
+        } else if (!localStorage.getItem('prime_logged_user')) {
+          setUserLoggedOutUI();
         }
       });
-    } catch (err) {
-      console.warn("Firebase Auth Listener Error:", err);
-    }
+    } catch (err) {}
   }
 
-  // Google Sign-In Execution Function
+  // Google Login Handler
   async function triggerGoogleSignIn() {
     if (errorBox) errorBox.classList.add('hidden');
-    if (modalGoogleBtn) { modalGoogleBtn.disabled = true; modalGoogleBtn.style.opacity = '0.7'; }
-    if (navGoogleBtn) { navGoogleBtn.disabled = true; navGoogleBtn.style.opacity = '0.7'; }
-
     if (typeof firebase !== 'undefined' && firebase.auth) {
       try {
         const provider = new firebase.auth.GoogleAuthProvider();
         provider.setCustomParameters({ prompt: 'select_account' });
-        const result = await firebase.auth().signInWithPopup(provider);
-        const user = result.user;
+        const res = await firebase.auth().signInWithPopup(provider);
+        const u = res.user;
         const userData = {
-          uid: user.uid,
-          displayName: user.displayName || user.email?.split('@')[0] || 'User',
-          email: user.email,
-          photoURL: user.photoURL
+          uid: u.uid,
+          displayName: u.displayName || u.email?.split('@')[0] || 'User',
+          email: u.email,
+          photoURL: u.photoURL
         };
         localStorage.setItem('prime_logged_user', JSON.stringify(userData));
         setUserLoggedInUI(userData);
-        if (modalGoogleBtn) { modalGoogleBtn.disabled = false; modalGoogleBtn.style.opacity = '1'; }
-        if (navGoogleBtn) { navGoogleBtn.disabled = false; navGoogleBtn.style.opacity = '1'; }
-        return;
-      } catch (firebaseErr) {
-        console.warn("Firebase Google Popup:", firebaseErr);
-        
-        // Handle Unauthorized Domain or Localhost Setup gracefully
-        if (firebaseErr.code === 'auth/unauthorized-domain' || firebaseErr.code === 'auth/invalid-api-key' || firebaseErr.code === 'auth/configuration-not-found' || firebaseErr.code === 'auth/api-key-not-valid.-please-pass-a-valid-api-key.') {
-          const promptName = prompt("Firebase Domain Setup Notice: Please enter your Google display name or email to continue:", "User");
-          if (promptName) {
-            const cleanName = promptName.includes('@') ? promptName.split('@')[0] : promptName;
-            const fallbackUser = {
-              uid: 'google_' + Date.now(),
-              displayName: cleanName,
-              email: promptName.includes('@') ? promptName : `${cleanName.toLowerCase()}@gmail.com`,
-              photoURL: `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanName}`
-            };
-            localStorage.setItem('prime_logged_user', JSON.stringify(fallbackUser));
-            setUserLoggedInUI(fallbackUser);
-            if (modalGoogleBtn) { modalGoogleBtn.disabled = false; modalGoogleBtn.style.opacity = '1'; }
-            if (navGoogleBtn) { navGoogleBtn.disabled = false; navGoogleBtn.style.opacity = '1'; }
-            return;
-          }
-        }
-
-        if (errorBox) {
-          errorBox.textContent = firebaseErr.message || 'Google sign in failed. Please try again.';
-          errorBox.classList.remove('hidden');
-        }
-      }
-    } else {
-      const promptName = prompt("Enter your Name or Gmail to continue:", "User");
-      if (promptName) {
-        const cleanName = promptName.includes('@') ? promptName.split('@')[0] : promptName;
-        const fallbackUser = {
-          uid: 'google_' + Date.now(),
-          displayName: cleanName,
-          email: promptName.includes('@') ? promptName : `${cleanName.toLowerCase()}@gmail.com`,
-          photoURL: `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanName}`
-        };
-        localStorage.setItem('prime_logged_user', JSON.stringify(fallbackUser));
-        setUserLoggedInUI(fallbackUser);
+      } catch (e) {
+        handleAuthFallback(e, 'Google');
       }
     }
-
-    if (modalGoogleBtn) { modalGoogleBtn.disabled = false; modalGoogleBtn.style.opacity = '1'; }
-    if (navGoogleBtn) { navGoogleBtn.disabled = false; navGoogleBtn.style.opacity = '1'; }
   }
 
-  // Attach click listeners to both modal and navbar Google buttons
-  if (modalGoogleBtn) modalGoogleBtn.onclick = triggerGoogleSignIn;
+  // GitHub Login Handler (Direct OAuth Popup with repo scope)
+  async function triggerGitHubSignIn() {
+    if (errorBox) errorBox.classList.add('hidden');
+
+    // 1. First attempt: Direct GitHub OAuth Popup with your Client ID
+    const redirectUri = `${window.location.origin}/api/auth/github/callback`;
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=repo,user&redirect_uri=${encodeURIComponent(redirectUri)}`;
+    
+    const popupWidth = 600;
+    const popupHeight = 700;
+    const left = window.screen.width / 2 - popupWidth / 2;
+    const top = window.screen.height / 2 - popupHeight / 2;
+
+    const popup = window.open(
+      authUrl,
+      'GitHub_OAuth_Login',
+      `width=${popupWidth},height=${popupHeight},top=${top},left=${left},status=yes,scrollbars=yes`
+    );
+
+    // Fallback if popup is blocked
+    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+      // Try Firebase OAuth provider as fallback
+      if (typeof firebase !== 'undefined' && firebase.auth) {
+        try {
+          const provider = new firebase.auth.GithubAuthProvider();
+          provider.addScope('repo');
+          provider.addScope('user');
+          const res = await firebase.auth().signInWithPopup(provider);
+          const credential = firebase.auth.GithubAuthProvider.credentialFromResult(res);
+          const token = credential.accessToken;
+          const u = res.user;
+
+          if (token) {
+            AppState.github.token = token;
+            localStorage.setItem('prime_gh_token', token);
+            syncGitHubAccount(token);
+          }
+
+          const userData = {
+            uid: u.uid,
+            displayName: u.displayName || u.reloadUserInfo?.screenName || 'Developer',
+            email: u.email,
+            photoURL: u.photoURL
+          };
+          localStorage.setItem('prime_logged_user', JSON.stringify(userData));
+          setUserLoggedInUI(userData);
+          return;
+        } catch (e) {
+          handleAuthFallback(e, 'GitHub');
+          return;
+        }
+      }
+      openGitHubModal();
+    }
+  }
+
+  function handleAuthFallback(err, providerName) {
+    console.warn(`${providerName} Sign-In fallback triggered:`, err);
+    const promptName = prompt(`Please enter your Name or Username to continue with ${providerName}:`, "Developer");
+    if (promptName) {
+      const cleanName = promptName.includes('@') ? promptName.split('@')[0] : promptName;
+      const demoUser = {
+        uid: 'user_' + Date.now(),
+        displayName: cleanName,
+        email: promptName.includes('@') ? promptName : `${cleanName.toLowerCase()}@gmail.com`,
+        photoURL: `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanName}`
+      };
+      localStorage.setItem('prime_logged_user', JSON.stringify(demoUser));
+      setUserLoggedInUI(demoUser);
+    }
+  }
+
+  if (googleBtn) googleBtn.onclick = triggerGoogleSignIn;
   if (navGoogleBtn) navGoogleBtn.onclick = triggerGoogleSignIn;
+  if (githubBtn) githubBtn.onclick = triggerGitHubSignIn;
+  if (navGithubBtn) navGithubBtn.onclick = triggerGitHubSignIn;
 }
 
 function setUserLoggedInUI(userData) {
@@ -264,7 +432,7 @@ function setUserLoggedInUI(userData) {
   const avatarImg = document.getElementById('user-avatar-img');
   const defaultIcon = document.getElementById('user-default-icon');
   const navUserProfile = document.getElementById('nav-user-profile');
-  const navGoogleBtn = document.getElementById('btn-nav-google-login');
+  const navAuthButtons = document.getElementById('nav-auth-buttons');
 
   if (nameSpan) nameSpan.textContent = userData.displayName;
 
@@ -277,15 +445,13 @@ function setUserLoggedInUI(userData) {
     if (defaultIcon) defaultIcon.classList.remove('hidden');
   }
 
-  // Update Header/Navbar UI
   if (navUserProfile) navUserProfile.classList.remove('hidden');
-  if (navGoogleBtn) navGoogleBtn.classList.add('hidden');
-
-  // Dismiss Auth Modal & Reveal Main Application
+  if (navAuthButtons) navAuthButtons.classList.add('hidden');
   if (authScreen) authScreen.classList.add('hidden');
   if (appScreen) appScreen.classList.remove('hidden');
 
   loadUserChats();
+  checkGitHubAutoInit();
 }
 
 function setUserLoggedOutUI() {
@@ -293,30 +459,128 @@ function setUserLoggedOutUI() {
   const authScreen = document.getElementById('auth-screen');
   const appScreen = document.getElementById('app');
   const navUserProfile = document.getElementById('nav-user-profile');
-  const navGoogleBtn = document.getElementById('btn-nav-google-login');
+  const navAuthButtons = document.getElementById('nav-auth-buttons');
 
   if (navUserProfile) navUserProfile.classList.add('hidden');
-  if (navGoogleBtn) navGoogleBtn.classList.remove('hidden');
+  if (navAuthButtons) navAuthButtons.classList.remove('hidden');
   if (authScreen) authScreen.classList.remove('hidden');
   if (appScreen) appScreen.classList.add('hidden');
 }
 
 function handleLogout() {
-  if (confirm('Are you sure you want to sign out of PRIME SYSTEM?')) {
+  if (confirm('Sign out of PRIME SYSTEM?')) {
     if (typeof firebase !== 'undefined' && firebase.auth) {
       try { firebase.auth().signOut(); } catch (e) {}
     }
     localStorage.removeItem('prime_logged_user');
     AppState.currentUser = null;
-    AppState.chats = {};
-    if (AppState.isSpeaking && window.speechSynthesis) window.speechSynthesis.cancel();
     setUserLoggedOutUI();
     location.reload();
   }
 }
 
 // ==========================================================================
-// 3. Conversation Management (Linked to Google Account)
+// 6. GitHub Integration & Repository Management
+// ==========================================================================
+
+async function checkGitHubAutoInit() {
+  const token = AppState.github.token;
+  if (token) {
+    await syncGitHubAccount(token);
+  }
+  updateRepoBadges();
+}
+
+async function syncGitHubAccount(token) {
+  try {
+    const user = await GitHubAPI.fetchCurrentUser(token);
+    AppState.github.user = user;
+    const banner = document.getElementById('github-connected-banner');
+    const avatar = document.getElementById('github-user-avatar');
+    const username = document.getElementById('github-username');
+    if (banner) banner.classList.remove('hidden');
+    if (avatar) avatar.src = user.avatar_url;
+    if (username) username.textContent = `${user.login} (${user.name || 'Developer'})`;
+
+    await loadUserRepositories();
+  } catch (e) {
+    console.warn("GitHub account sync:", e.message);
+  }
+}
+
+async function loadUserRepositories() {
+  try {
+    const repos = await GitHubAPI.fetchUserRepos();
+    AppState.github.repos = repos;
+    const select = document.getElementById('github-repo-select');
+    select.innerHTML = '<option value="">-- Choose a Repository --</option>';
+
+    repos.forEach(r => {
+      const opt = document.createElement('option');
+      opt.value = r.full_name;
+      opt.textContent = `${r.full_name} ${r.private ? '🔒' : '🌐'} (${r.default_branch})`;
+      if (AppState.github.selectedRepo === r.full_name) opt.selected = true;
+      select.appendChild(opt);
+    });
+
+    if (AppState.github.selectedRepo) {
+      await inspectRepoFiles(AppState.github.selectedRepo);
+    }
+  } catch (e) {
+    console.warn("Repo fetch error:", e);
+  }
+}
+
+async function inspectRepoFiles(fullRepoName) {
+  if (!fullRepoName) return;
+  const [owner, repo] = fullRepoName.split('/');
+  const branch = AppState.github.selectedBranch || 'main';
+  const treeContainer = document.getElementById('repo-tree-list');
+  const countSpan = document.getElementById('tree-file-count');
+
+  treeContainer.innerHTML = '<div class="tree-empty">Fetching file hierarchy...</div>';
+  const files = await GitHubAPI.fetchRepoTree(owner, repo, branch);
+  AppState.github.files = files;
+
+  if (countSpan) countSpan.textContent = files.length;
+  treeContainer.innerHTML = '';
+
+  if (files.length === 0) {
+    treeContainer.innerHTML = '<div class="tree-empty">No files found or default branch different.</div>';
+    return;
+  }
+
+  files.slice(0, 80).forEach(file => {
+    const item = document.createElement('div');
+    item.className = 'tree-item';
+    item.innerHTML = `<i data-lucide="file-code"></i> <span>${file}</span>`;
+    treeContainer.appendChild(item);
+  });
+  try { if (window.lucide) lucide.createIcons(); } catch (e) {}
+}
+
+function updateRepoBadges() {
+  const repoName = AppState.github.selectedRepo || 'No Repo Selected';
+  const sidebarRepo = document.getElementById('sidebar-repo-name');
+  const navRepo = document.getElementById('nav-repo-label');
+  if (sidebarRepo) sidebarRepo.textContent = repoName;
+  if (navRepo) navRepo.textContent = repoName !== 'No Repo Selected' ? repoName : 'Select Repo';
+}
+
+function openGitHubModal() {
+  const modal = document.getElementById('github-modal');
+  modal.classList.remove('hidden');
+  if (AppState.github.token && AppState.github.repos.length === 0) {
+    loadUserRepositories();
+  }
+}
+
+function closeGitHubModal() {
+  document.getElementById('github-modal').classList.add('hidden');
+}
+
+// ==========================================================================
+// 7. Conversation Management (Linked to Account)
 // ==========================================================================
 
 function getStorageChatKey() {
@@ -336,13 +600,9 @@ function loadUserChats() {
   if (savedChats) {
     try { AppState.chats = JSON.parse(savedChats); } catch (e) {}
   }
-
   const sessionIds = Object.keys(AppState.chats);
-  if (sessionIds.length > 0) {
-    switchChat(sessionIds[0]);
-  } else {
-    createNewChat();
-  }
+  if (sessionIds.length > 0) switchChat(sessionIds[0]);
+  else createNewChat();
 }
 
 function createNewChat() {
@@ -386,7 +646,7 @@ function setPersona(persona) {
 }
 
 // ==========================================================================
-// 4. Voice Engine (Cute Female & Deep Male)
+// 8. Voice Engine (Cute Female & Deep Male)
 // ==========================================================================
 
 function updateVoiceCache() {
@@ -500,65 +760,82 @@ function speakMessage(text, msgId) {
 }
 
 // ==========================================================================
-// 5. File Attachments
+// 9. Autonomous File Parsing & Direct GitHub Commits
 // ==========================================================================
 
-function handleFiles(files) {
-  if (!files || files.length === 0) return;
-  Array.from(files).forEach(file => {
-    const reader = new FileReader();
-    if (file.type.startsWith('image/')) {
-      reader.onload = (e) => {
-        AppState.pendingAttachments.push({
-          type: 'image',
-          name: file.name,
-          dataUrl: e.target.result
-        });
-        renderTray();
-      };
-      reader.readAsDataURL(file);
-    } else {
-      reader.onload = (e) => {
-        AppState.pendingAttachments.push({
-          type: 'document',
-          name: file.name,
-          content: e.target.result
-        });
-        renderTray();
-      };
-      reader.readAsText(file);
+async function parseAndExecuteAutonomousCommits(aiText, aiMsgId) {
+  if (!AppState.github.selectedRepo || !AppState.github.token) return;
+
+  const fileRegex = /<<<FILE:\s*([^>]+)>>>([\s\S]*?)<<<END_FILE>>>/g;
+  let match;
+  const commitsToRun = [];
+
+  while ((match = fileRegex.exec(aiText)) !== null) {
+    const filePath = match[1].trim();
+    const fileContent = match[2].trim();
+    if (filePath && fileContent) {
+      commitsToRun.push({ path: filePath, content: fileContent });
     }
-  });
-}
-
-function renderTray() {
-  const tray = document.getElementById('attachment-tray');
-  tray.innerHTML = '';
-  if (AppState.pendingAttachments.length === 0) {
-    tray.classList.add('hidden');
-    return;
   }
-  tray.classList.remove('hidden');
-  AppState.pendingAttachments.forEach((att, idx) => {
-    const item = document.createElement('div');
-    item.className = 'tray-item';
-    item.innerHTML = `
-      <i data-lucide="${att.type === 'image' ? 'image' : 'file-text'}"></i>
-      <span>${att.name}</span>
-      <button class="tray-item-del" onclick="removeAttachment(${idx})"><i data-lucide="x"></i></button>
-    `;
-    tray.appendChild(item);
-  });
-  try { if (window.lucide) lucide.createIcons(); } catch (e) {}
-}
 
-window.removeAttachment = function(idx) {
-  AppState.pendingAttachments.splice(idx, 1);
-  renderTray();
-};
+  if (commitsToRun.length === 0) return;
+
+  const [owner, repo] = AppState.github.selectedRepo.split('/');
+  const branch = AppState.github.selectedBranch || 'main';
+  let commitCardsHtml = '';
+
+  for (const item of commitsToRun) {
+    try {
+      const commitRes = await GitHubAPI.commitFileChange(
+        owner,
+        repo,
+        item.path,
+        item.content,
+        `Update ${item.path} via PRIME SYSTEM Autonomous AI`,
+        branch
+      );
+
+      const commitSha = commitRes.commit?.sha ? commitRes.commit.sha.substring(0, 7) : 'head';
+      const commitUrl = commitRes.commit?.html_url || `https://github.com/${owner}/${repo}/commits/${branch}`;
+
+      commitCardsHtml += `
+        <div class="github-commit-card">
+          <div class="commit-card-header">
+            <span class="commit-badge"><i data-lucide="check-circle-2"></i> Pushed to GitHub</span>
+            <span class="commit-sha-pill">${commitSha}</span>
+          </div>
+          <div class="commit-msg">⚡ <strong>${item.path}</strong> auto-committed directly to <code>${branch}</code> branch!</div>
+          <div class="commit-meta">
+            <span>Repository: <strong>${owner}/${repo}</strong></span>
+          </div>
+          <a href="${commitUrl}" target="_blank" class="commit-link-btn">
+            <i data-lucide="external-link"></i> View Commit on GitHub
+          </a>
+        </div>
+      `;
+    } catch (commitErr) {
+      commitCardsHtml += `
+        <div class="github-commit-card" style="border-color:#ef4444;">
+          <div class="commit-card-header">
+            <span class="commit-badge" style="color:#ef4444;"><i data-lucide="alert-triangle"></i> Commit Error</span>
+          </div>
+          <div class="commit-msg">Failed to commit <strong>${item.path}</strong>: ${commitErr.message}</div>
+        </div>
+      `;
+    }
+  }
+
+  const currentChat = AppState.chats[AppState.currentSessionId];
+  const aiMsg = currentChat.messages.find(m => m.id === aiMsgId);
+  if (aiMsg && commitCardsHtml) {
+    aiMsg.content += `\n\n${commitCardsHtml}`;
+    updateBubble(aiMsgId, aiMsg.content);
+    saveUserChats();
+  }
+}
 
 // ==========================================================================
-// 6. Direct In-Chat AI Image Generator
+// 10. Direct In-Chat AI Image Generator (10X Photoreal)
 // ==========================================================================
 
 async function handleInChatImageGeneration(text, aiMsgId) {
@@ -568,7 +845,7 @@ async function handleInChatImageGeneration(text, aiMsgId) {
   const userName = AppState.currentUser ? AppState.currentUser.displayName : 'User';
   const isFemale = AppState.settings.persona === 'female';
 
-  updateBubble(aiMsgId, `🎨 **PRIME ART STUDIO:** *${cleanPrompt}* ke liye visual generate ho raha hai... ✨`);
+  updateBubble(aiMsgId, `🎨 **PRIME ART STUDIO (10X Photoreal):** *${cleanPrompt}* ke liye ultra-realistic visual render ho raha hai... ✨`);
 
   let imgSrc = null;
   const enhanced = enhanceImagePrompt(cleanPrompt);
@@ -602,10 +879,10 @@ async function handleInChatImageGeneration(text, aiMsgId) {
   }
 
   const spokenGreeting = isFemale
-    ? `Ji ${userName} sir! Aapki image generate kar di gayi hai.`
-    : `Ji ${userName} sir! Aapki image ready ho gayi hai.`;
+    ? `Ji ${userName} sir! Aapka 10X photorealistic visual ready hai.`
+    : `Ji ${userName} sir! 10X photorealistic artwork generate ho gaya hai.`;
 
-  aiMsg.content = `✨ **PRIME ART STUDIO Artwork Generated:**\n\n![${cleanPrompt}](${imgSrc})\n\n[⬇️ **Download High-Definition Artwork**](${imgSrc})\n\n*${spokenGreeting}*`;
+  aiMsg.content = `✨ **PRIME ART STUDIO (10X Photorealism Masterpiece):**\n\n![${cleanPrompt}](${imgSrc})\n\n[⬇️ **Download 8K High-Resolution Artwork**](${imgSrc})\n\n*${spokenGreeting}*`;
   updateBubble(aiMsgId, aiMsg.content);
 
   if (AppState.settings.autoSpeak) {
@@ -619,7 +896,7 @@ async function handleInChatImageGeneration(text, aiMsgId) {
 }
 
 // ==========================================================================
-// 7. Messaging Pipeline (Direct LLM Streaming)
+// 11. Messaging Pipeline (Direct LLM Streaming & Autonomous Coder)
 // ==========================================================================
 
 async function sendMessage() {
@@ -666,7 +943,7 @@ async function sendMessage() {
 
   const chosenModel = MODEL_MAPPING[AppState.settings.model] || 'kira-3.5-pro';
   const userName = AppState.currentUser ? AppState.currentUser.displayName : 'User';
-  const dynamicPrompt = getSystemPrompt(AppState.settings.persona, userName);
+  const dynamicPrompt = getSystemPrompt(AppState.settings.persona, userName, AppState.settings.model);
   const apiMessages = [{ role: 'system', content: dynamicPrompt }];
 
   currentChat.messages.slice(0, -1).forEach(m => {
@@ -681,7 +958,7 @@ async function sendMessage() {
         apiMessages.push({
           role: 'user',
           content: [
-            { type: 'text', text: combined || 'Analyze this image.' },
+            { type: 'text', text: combined || 'Analyze this file.' },
             ...images.map(img => ({ type: 'image_url', image_url: { url: img.dataUrl } }))
           ]
         });
@@ -703,8 +980,8 @@ async function sendMessage() {
       body: JSON.stringify({
         model: chosenModel,
         messages: apiMessages,
-        temperature: parseFloat(AppState.settings.temperature) || 0.65,
-        max_tokens: parseInt(AppState.settings.maxTokens) || 4096,
+        temperature: parseFloat(AppState.settings.temperature) || 0.4,
+        max_tokens: parseInt(AppState.settings.maxTokens) || 6144,
         stream: true
       })
     });
@@ -740,6 +1017,10 @@ async function sendMessage() {
 
     aiMsg.content = sanitizeText(aiMsg.content);
     saveUserChats();
+
+    // Check and execute autonomous GitHub commits if files were produced
+    await parseAndExecuteAutonomousCommits(aiMsg.content, aiMsgId);
+
     if (AppState.settings.autoSpeak && aiMsg.content) {
       speakMessage(aiMsg.content, aiMsgId);
     }
@@ -781,9 +1062,13 @@ function highlightCodes(container) {
       header.className = 'code-header';
       header.innerHTML = `
         <span>${lang.toUpperCase()}</span>
-        <button class="btn-code-copy"><i data-lucide="copy"></i> Copy</button>
+        <div class="code-header-actions">
+          <button class="btn-code-commit"><i data-lucide="git-commit"></i> Commit to Repo</button>
+          <button class="btn-code-copy"><i data-lucide="copy"></i> Copy</button>
+        </div>
       `;
       pre.insertBefore(header, block);
+
       header.querySelector('.btn-code-copy').onclick = () => {
         navigator.clipboard.writeText(block.innerText);
         header.querySelector('.btn-code-copy').innerHTML = '<i data-lucide="check"></i> Copied';
@@ -792,13 +1077,45 @@ function highlightCodes(container) {
           try { if (window.lucide) lucide.createIcons(); } catch (e) {}
         }, 1500);
       };
+
+      header.querySelector('.btn-code-commit').onclick = async () => {
+        if (!AppState.github.selectedRepo || !AppState.github.token) {
+          alert('Please connect GitHub and select a repository first.');
+          openGitHubModal();
+          return;
+        }
+        const fileName = prompt("Enter target file path in repository (e.g. index.html or src/app.js):", "main.py");
+        if (!fileName) return;
+
+        const [owner, repo] = AppState.github.selectedRepo.split('/');
+        const branch = AppState.github.selectedBranch || 'main';
+        const btn = header.querySelector('.btn-code-commit');
+        btn.innerHTML = '<i data-lucide="loader"></i> Committing...';
+
+        try {
+          await GitHubAPI.commitFileChange(
+            owner,
+            repo,
+            fileName,
+            block.innerText,
+            `Update ${fileName} via PRIME SYSTEM AI Coder`,
+            branch
+          );
+          btn.innerHTML = '<i data-lucide="check"></i> Committed!';
+          alert(`Success! ${fileName} has been committed directly to ${owner}/${repo} on branch ${branch}!`);
+        } catch (commitErr) {
+          alert(`Commit Failed: ${commitErr.message}`);
+          btn.innerHTML = '<i data-lucide="git-commit"></i> Commit to Repo';
+        }
+        try { if (window.lucide) lucide.createIcons(); } catch (e) {}
+      };
     }
   });
   try { if (window.lucide) lucide.createIcons(); } catch (e) {}
 }
 
 // ==========================================================================
-// 8. Image Modal Generator (Dedicated Studio)
+// 12. 10X Image Modal Generator (Dedicated Studio)
 // ==========================================================================
 
 async function generateModalImage() {
@@ -808,7 +1125,7 @@ async function generateModalImage() {
   if (!prompt) return;
 
   const box = document.getElementById('image-result-box');
-  box.innerHTML = `<div style="padding:25px; color:#00c8ff; text-align:center;"><p>🎨 Generating visual...</p></div>`;
+  box.innerHTML = `<div style="padding:25px; color:#00c8ff; text-align:center;"><p>🎨 Rendering 10X photoreal artwork...</p></div>`;
 
   const finalPrompt = enhanceImagePrompt(prompt, style);
   let imgSrc = null;
@@ -843,10 +1160,10 @@ async function generateModalImage() {
 
   box.innerHTML = `
     <div style="display:flex; flex-direction:column; align-items:center; gap:10px; width:100%;">
-      <img src="${imgSrc}" style="max-height:340px; width:auto; border-radius:8px; border:1px solid rgba(255,255,255,0.1);" alt="Generated Artwork">
+      <img src="${imgSrc}" style="max-height:360px; width:auto; border-radius:8px; border:1px solid rgba(255,255,255,0.1);" alt="Generated 10X Artwork">
       <div style="display:flex; gap:8px;">
-        <a href="${imgSrc}" download="PRIME_Artwork_${Date.now()}.png" class="btn-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
-          <i data-lucide="download"></i> Download Artwork
+        <a href="${imgSrc}" download="PRIME_10X_Artwork_${Date.now()}.png" class="btn-primary" style="text-decoration:none; display:inline-flex; align-items:center; gap:6px;">
+          <i data-lucide="download"></i> Download 8K Image
         </a>
         <button id="btn-insert-modal-img" class="btn-primary" style="background:#10b981;">
           <i data-lucide="plus"></i> Insert in Chat
@@ -858,7 +1175,7 @@ async function generateModalImage() {
   document.getElementById('btn-insert-modal-img').onclick = () => {
     AppState.pendingAttachments.push({
       type: 'image',
-      name: 'generated_art.png',
+      name: 'prime_10x_art.png',
       dataUrl: imgSrc
     });
     renderTray();
@@ -869,52 +1186,111 @@ async function generateModalImage() {
 }
 
 // ==========================================================================
-// 9. UI Rendering
+// 13. File Attachments Tray
+// ==========================================================================
+
+function handleFiles(files) {
+  if (!files || files.length === 0) return;
+  Array.from(files).forEach(file => {
+    const reader = new FileReader();
+    if (file.type.startsWith('image/')) {
+      reader.onload = (e) => {
+        AppState.pendingAttachments.push({
+          type: 'image',
+          name: file.name,
+          dataUrl: e.target.result
+        });
+        renderTray();
+      };
+      reader.readAsDataURL(file);
+    } else {
+      reader.onload = (e) => {
+        AppState.pendingAttachments.push({
+          type: 'document',
+          name: file.name,
+          content: e.target.result
+        });
+        renderTray();
+      };
+      reader.readAsText(file);
+    }
+  });
+}
+
+function renderTray() {
+  const tray = document.getElementById('attachment-tray');
+  tray.innerHTML = '';
+  if (AppState.pendingAttachments.length === 0) {
+    tray.classList.add('hidden');
+    return;
+  }
+  tray.classList.remove('hidden');
+  AppState.pendingAttachments.forEach((att, idx) => {
+    const item = document.createElement('div');
+    item.className = 'tray-item';
+    item.innerHTML = `
+      <i data-lucide="${att.type === 'image' ? 'image' : 'file-code'}"></i>
+      <span>${att.name}</span>
+      <button class="tray-item-del" onclick="removeAttachment(${idx})"><i data-lucide="x"></i></button>
+    `;
+    tray.appendChild(item);
+  });
+  try { if (window.lucide) lucide.createIcons(); } catch (e) {}
+}
+
+window.removeAttachment = function(idx) {
+  AppState.pendingAttachments.splice(idx, 1);
+  renderTray();
+};
+
+// ==========================================================================
+// 14. UI Rendering (Welcome Hero & Messages)
 // ==========================================================================
 
 function renderMessages() {
   const container = document.getElementById('chat-messages');
   const currentChat = AppState.chats[AppState.currentSessionId];
-  const userName = AppState.currentUser ? AppState.currentUser.displayName : 'User';
+  const userName = AppState.currentUser ? AppState.currentUser.displayName : 'Developer';
+  const activeRepo = AppState.github.selectedRepo;
 
   if (!currentChat || currentChat.messages.length === 0) {
     container.innerHTML = `
       <div id="welcome-hero" class="welcome-hero">
         <div class="hero-card">
           <div class="hero-icon"><i data-lucide="terminal"></i></div>
-          <h1 class="hero-title">PRIME SYSTEM</h1>
-          <p class="hero-subtitle">Welcome, <strong>${userName}</strong> • Executive AI Intelligence</p>
+          <h1 class="hero-title">PRIME SYSTEM 100X</h1>
+          <p class="hero-subtitle">Welcome, <strong>${userName}</strong> • Autonomous GitHub AI Coder &amp; 10X Image Studio</p>
           <div class="hero-owner-tag">
             <i data-lucide="award"></i>
-            <span>Sole Creator & Owner: <strong>Shantanu Sharma</strong></span>
+            <span>Sole Creator &amp; Owner: <strong>Shantanu Sharma</strong></span>
           </div>
           <div class="starter-grid">
-            <div class="starter-card" data-prompt="Namaste! Kahiye aap meri kya help kar sakti hain?">
-              <i data-lucide="smile"></i>
+            <div class="starter-card" data-prompt="Mera selected repo inspect karo aur ek new feature branch bana kar beautiful dark mode toggle add karo with direct commit.">
+              <i data-lucide="git-pull-request"></i>
               <div>
-                <strong>Sweet Greeting</strong>
-                <p>Test persona addressing to ${userName}</p>
+                <strong>Autonomous Repo Commit</strong>
+                <p>${activeRepo ? `Target: ${activeRepo}` : 'Auto-code & push changes to GitHub'}</p>
               </div>
             </div>
-            <div class="starter-card" data-prompt="Ek futuristic glowing water-glass palace ki image banao">
-              <i data-lucide="image"></i>
+            <div class="starter-card" data-prompt="Ek ultra-realistic 8K photorealistic luxury hypercar in rain reflection image banao">
+              <i data-lucide="sparkles"></i>
               <div>
-                <strong>Direct AI Image Gen</strong>
-                <p>Generate high-definition AI image in chat</p>
+                <strong>10X Ultra-Photoreal Image</strong>
+                <p>Generate 8K master visual in chat</p>
+              </div>
+            </div>
+            <div class="starter-card" data-prompt="Ek production-grade full-stack authentication system likho with JWT, rate limiting, and password hashing.">
+              <i data-lucide="code-2"></i>
+              <div>
+                <strong>100X Senior Staff Architecture</strong>
+                <p>Zero-bug, clean, highly-optimized code</p>
               </div>
             </div>
             <div class="starter-card" data-prompt="Who is your owner and creator?">
-              <i data-lucide="shield"></i>
+              <i data-lucide="shield-check"></i>
               <div>
-                <strong>Owner Verification</strong>
+                <strong>Authority Verification</strong>
                 <p>Verify Shantanu Sharma authority</p>
-              </div>
-            </div>
-            <div class="starter-card" data-prompt="Ek clean aur optimized Python script likho with full explanation.">
-              <i data-lucide="code"></i>
-              <div>
-                <strong>Code & Logic</strong>
-                <p>Direct, bug-free, optimized code</p>
               </div>
             </div>
           </div>
@@ -944,7 +1320,7 @@ function renderMessages() {
         if (att.type === 'image') {
           attachmentsHtml += `<img src="${att.dataUrl}" style="max-height:220px; border-radius:8px; margin-bottom:8px; display:block;" alt="${att.name}">`;
         } else {
-          attachmentsHtml += `<div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;"><i data-lucide="file"></i> ${att.name}</div>`;
+          attachmentsHtml += `<div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:4px;"><i data-lucide="file-code"></i> ${att.name}</div>`;
         }
       });
     }
@@ -999,12 +1375,60 @@ function renderChatList() {
 }
 
 // ==========================================================================
-// 10. Event Bindings
+// 15. Event Bindings
 // ==========================================================================
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Listen for OAuth token from GitHub Callback Popup
+  window.addEventListener('message', async (event) => {
+    if (event.data && event.data.type === 'PRIME_GITHUB_OAUTH_TOKEN') {
+      const token = event.data.token;
+      if (token) {
+        AppState.github.token = token;
+        localStorage.setItem('prime_gh_token', token);
+        await syncGitHubAccount(token);
+
+        if (AppState.github.user) {
+          const u = AppState.github.user;
+          const userData = {
+            uid: 'gh_' + u.id,
+            displayName: u.name || u.login,
+            email: u.email || `${u.login}@github.user`,
+            photoURL: u.avatar_url
+          };
+          localStorage.setItem('prime_logged_user', JSON.stringify(userData));
+          setUserLoggedInUI(userData);
+        }
+
+        alert('🐙 GitHub Account Connected Successfully! Repositories loaded.');
+      }
+    }
+  });
+
+  // Check URL query parameters for ?github_token=... (if redirected)
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlGhToken = urlParams.get('github_token');
+  if (urlGhToken) {
+    AppState.github.token = urlGhToken;
+    localStorage.setItem('prime_gh_token', urlGhToken);
+    window.history.replaceState({}, document.title, window.location.pathname);
+    syncGitHubAccount(urlGhToken).then(() => {
+      if (AppState.github.user) {
+        const u = AppState.github.user;
+        const userData = {
+          uid: 'gh_' + u.id,
+          displayName: u.name || u.login,
+          email: u.email || `${u.login}@github.user`,
+          photoURL: u.avatar_url
+        };
+        localStorage.setItem('prime_logged_user', JSON.stringify(userData));
+        setUserLoggedInUI(userData);
+      }
+    });
+  }
+
   initBootSequence();
-  initFirebaseAuth();
+  initAuth();
   initVoice();
 
   document.getElementById('btn-logout').onclick = handleLogout;
@@ -1064,6 +1488,64 @@ document.addEventListener('DOMContentLoaded', () => {
     AppState.settings.model = e.target.value;
   };
 
+  // GitHub Modal Controls
+  document.getElementById('btn-quick-github').onclick = openGitHubModal;
+  document.getElementById('btn-close-github-modal').onclick = closeGitHubModal;
+
+  document.getElementById('btn-save-github-token').onclick = async () => {
+    const token = document.getElementById('github-token-input').value.trim();
+    if (!token) return alert('Please paste your GitHub Personal Access Token.');
+    AppState.github.token = token;
+    localStorage.setItem('prime_gh_token', token);
+    await syncGitHubAccount(token);
+    alert('GitHub Token Connected Successfully!');
+  };
+
+  document.getElementById('btn-modal-github-login').onclick = () => {
+    document.getElementById('btn-github-login')?.click();
+  };
+
+  document.getElementById('btn-disconnect-github').onclick = () => {
+    if (confirm('Disconnect GitHub account?')) {
+      AppState.github.token = null;
+      AppState.github.user = null;
+      AppState.github.selectedRepo = null;
+      AppState.github.files = [];
+      localStorage.removeItem('prime_gh_token');
+      localStorage.removeItem('prime_gh_repo');
+      document.getElementById('github-connected-banner').classList.add('hidden');
+      updateRepoBadges();
+      alert('GitHub disconnected.');
+    }
+  };
+
+  document.getElementById('btn-refresh-repos').onclick = () => {
+    if (AppState.github.token) loadUserRepositories();
+    else alert('Please connect GitHub first.');
+  };
+
+  document.getElementById('github-repo-select').onchange = async (e) => {
+    const repo = e.target.value;
+    if (repo) {
+      await inspectRepoFiles(repo);
+    }
+  };
+
+  document.getElementById('btn-set-active-repo').onclick = () => {
+    const repo = document.getElementById('github-repo-select').value;
+    const branch = document.getElementById('github-branch-input').value.trim() || 'main';
+    if (!repo) return alert('Please select a repository first.');
+
+    AppState.github.selectedRepo = repo;
+    AppState.github.selectedBranch = branch;
+    localStorage.setItem('prime_gh_repo', repo);
+    localStorage.setItem('prime_gh_branch', branch);
+    updateRepoBadges();
+    closeGitHubModal();
+    alert(`Success! Active repo set to: ${repo} [${branch}]. Now simply ask PRIME CODER to code and it will auto-commit directly to GitHub!`);
+  };
+
+  // Image Studio Modal Controls
   const imageModal = document.getElementById('image-modal');
   document.getElementById('btn-quick-image').onclick = () => imageModal.classList.remove('hidden');
   document.getElementById('btn-close-image-modal').onclick = () => imageModal.classList.add('hidden');

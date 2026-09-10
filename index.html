@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PRIME SYSTEM — Executive AI & Creative Studio</title>
+  <title>PRIME SYSTEM — Executive AI & Autonomous GitHub Studio</title>
   
   <!-- Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -80,37 +80,47 @@
   </div>
 
   <!-- ==========================================================================
-       2. Firebase Google / Gmail Authentication Modal
+       2. Multi-Auth Screen Modal (Google & GitHub)
        ========================================================================== -->
   <div id="auth-screen" class="auth-screen hidden">
     <div class="auth-card">
       <div class="auth-header">
         <div class="auth-logo">
-          <i data-lucide="sparkles"></i>
+          <i data-lucide="terminal"></i>
         </div>
         <h2>PRIME SYSTEM</h2>
-        <p>Executive AI Intelligence & Creative Studio</p>
+        <p>Autonomous AI Coder & Executive Creative Studio</p>
       </div>
 
       <div class="auth-body">
-        <p class="auth-desc">Sign in with your Google account to access quantum AI conversations, voice interactions, and high-definition image generation.</p>
+        <p class="auth-desc">Sign in with Google or GitHub to unlock 100x AI Coding, direct repository control & auto-commits, and 10x high-res image generation.</p>
         
         <div id="auth-error-box" class="auth-error-box hidden"></div>
 
-        <!-- Google Sign-In Button -->
-        <button type="button" id="btn-google-login" class="btn-google-signin">
-          <svg class="google-icon" viewBox="0 0 24 24" width="20" height="20">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-          </svg>
-          <span>Sign In with Google</span>
-        </button>
+        <div class="auth-btn-stack">
+          <!-- Google Sign-In Button -->
+          <button type="button" id="btn-google-login" class="btn-auth btn-google-signin">
+            <svg class="auth-btn-icon" viewBox="0 0 24 24" width="20" height="20">
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+            </svg>
+            <span>Continue with Google</span>
+          </button>
+
+          <!-- GitHub Sign-In Button -->
+          <button type="button" id="btn-github-login" class="btn-auth btn-github-signin">
+            <svg class="auth-btn-icon" viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+            </svg>
+            <span>Continue with GitHub (Repo Access)</span>
+          </button>
+        </div>
       </div>
 
       <div class="auth-footer">
-        <span>Authority & Creator: <strong>Shantanu Sharma</strong></span>
+        <span>System Authority: <strong>Shantanu Sharma</strong></span>
       </div>
     </div>
   </div>
@@ -119,7 +129,7 @@
   <div id="sidebar-overlay" class="sidebar-overlay hidden"></div>
 
   <!-- ==========================================================================
-       3. Main Application Workspace (Pure AI)
+       3. Main Application Workspace (Pure AI & Autonomous GitHub Studio)
        ========================================================================== -->
   <div id="app" class="app-container hidden">
     
@@ -132,7 +142,7 @@
           </div>
           <div class="brand-info">
             <span class="brand-name">PRIME SYSTEM</span>
-            <span class="brand-tag">EXECUTIVE AI</span>
+            <span class="brand-tag">AUTONOMOUS CODER</span>
           </div>
         </div>
         <button id="btn-sidebar-close" class="btn-icon" title="Close Sidebar">
@@ -145,6 +155,22 @@
         <i data-lucide="plus"></i>
         <span>New Conversation</span>
       </button>
+
+      <!-- GitHub Active Repository Quick Badge in Sidebar -->
+      <div id="sidebar-github-card" class="sidebar-github-card" onclick="openGitHubModal()">
+        <div class="github-card-header">
+          <div class="github-icon-wrap">
+            <i data-lucide="github"></i>
+          </div>
+          <div class="github-repo-meta">
+            <span class="github-meta-label">ACTIVE REPO</span>
+            <span id="sidebar-repo-name" class="github-meta-val">No Repo Selected</span>
+          </div>
+        </div>
+        <button class="btn-github-manage" type="button">
+          <i data-lucide="settings"></i> Connect
+        </button>
+      </div>
 
       <!-- Chat History List -->
       <div class="sidebar-section-header">
@@ -181,14 +207,23 @@
           <button id="btn-sidebar-toggle" class="btn-icon" title="Toggle Sidebar">
             <i data-lucide="panel-left-open"></i>
           </button>
+          
+          <!-- AI Model Selector (Includes 100X Coder) -->
           <div class="compound-ai-badge">
             <div class="pulse-dot"></div>
             <select id="model-select" class="select-clean">
-              <option value="prime-omni" selected>⚡ PRIME OMNI FUSION</option>
-              <option value="prime-pro">🧠 PRIME DEEP PRO</option>
+              <option value="prime-coder-100x" selected>⚡ PRIME CODER 100X (Autonomous Architect)</option>
+              <option value="prime-omni">🧠 PRIME OMNI FUSION</option>
+              <option value="prime-pro">🔬 PRIME DEEP PRO</option>
               <option value="prime-turbo">🚀 PRIME TURBO SPEED</option>
-              <option value="prime-art">🎨 PRIME ART STUDIO</option>
+              <option value="prime-art">🎨 PRIME ART STUDIO (10X Photoreal)</option>
             </select>
+          </div>
+
+          <!-- Active GitHub Repo Header Chip -->
+          <div id="header-repo-chip" class="header-repo-chip" onclick="openGitHubModal()" title="Click to Switch GitHub Repository">
+            <i data-lucide="git-branch"></i>
+            <span id="nav-repo-label">Select Repo</span>
           </div>
         </div>
 
@@ -212,7 +247,7 @@
           <!-- User Authentication & Profile in Header -->
           <div id="nav-user-container" class="nav-user-container">
             <!-- 1. Logged In View: Avatar + Name + Logout -->
-            <div id="nav-user-profile" class="user-profile-badge hidden" title="Click to Sign Out">
+            <div id="nav-user-profile" class="user-profile-badge hidden" title="Account Details">
               <img id="user-avatar-img" class="user-avatar-small hidden" alt="Avatar" src="">
               <i id="user-default-icon" data-lucide="user"></i>
               <span id="user-display-name">User</span>
@@ -221,16 +256,23 @@
               </button>
             </div>
 
-            <!-- 2. Logged Out View: Sign in with Google Button in Header -->
-            <button id="btn-nav-google-login" class="btn-nav-google hidden" type="button" title="Sign In with Google">
-              <svg class="google-icon" viewBox="0 0 24 24" width="15" height="15">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-              </svg>
-              <span>Sign In</span>
-            </button>
+            <!-- 2. Logged Out View: Sign In Options in Header -->
+            <div id="nav-auth-buttons" class="nav-auth-buttons hidden">
+              <button id="btn-nav-google-login" class="btn-nav-auth" type="button" title="Sign In with Google">
+                <svg viewBox="0 0 24 24" width="14" height="14">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                </svg>
+                <span>Google</span>
+              </button>
+
+              <button id="btn-nav-github-login" class="btn-nav-auth github" type="button" title="Sign In with GitHub">
+                <i data-lucide="github"></i>
+                <span>GitHub</span>
+              </button>
+            </div>
           </div>
 
           <!-- Owner Corner Badge -->
@@ -262,17 +304,21 @@
 
         <div class="input-box">
           <div class="input-left">
-            <button id="btn-attach-file" class="btn-icon-input" title="Attach Image or Document">
+            <button id="btn-attach-file" class="btn-icon-input" title="Attach Code, File, or Image">
               <i data-lucide="paperclip"></i>
             </button>
-            <input type="file" id="file-input" multiple accept="image/*,.pdf,.txt,.md,.json,.csv,.py,.js" style="display:none;">
+            <input type="file" id="file-input" multiple accept="image/*,.pdf,.txt,.md,.json,.csv,.py,.js,.html,.css,.jsx,.tsx,.ts,.java,.cpp,.c,.go,.rs" style="display:none;">
 
-            <button id="btn-quick-image" class="btn-icon-input" title="Generate AI Image">
+            <button id="btn-quick-github" class="btn-icon-input highlight-github" title="Select GitHub Repo & Auto-Commit">
+              <i data-lucide="github"></i>
+            </button>
+
+            <button id="btn-quick-image" class="btn-icon-input" title="Open 10X AI Image Studio">
               <i data-lucide="image-plus"></i>
             </button>
           </div>
 
-          <textarea id="chat-input" rows="1" placeholder="Type your instruction or request image..."></textarea>
+          <textarea id="chat-input" rows="1" placeholder="Ask 100X Coder to write code & commit to repo, or request photorealistic 10X images..."></textarea>
 
           <div class="input-right">
             <!-- Voice Dictation -->
@@ -287,52 +333,141 @@
           </div>
         </div>
         <div class="system-footnote">
-          <span>PRIME SYSTEM • Executive Intelligence • Owner: Shantanu Sharma</span>
+          <span>PRIME SYSTEM 100X • Autonomous GitHub Commits • 10X Photoreal Images • Creator: Shantanu Sharma</span>
         </div>
       </footer>
     </main>
   </div>
 
-  <!-- Image Studio Modal -->
+  <!-- ==========================================================================
+       4. GitHub Autonomous Repository Control Modal
+       ========================================================================== -->
+  <div id="github-modal" class="modal-overlay hidden">
+    <div class="modal-card modal-lg">
+      <div class="modal-header">
+        <div class="modal-title">
+          <i data-lucide="github"></i>
+          <span>GitHub Autonomous Repository Control</span>
+        </div>
+        <button id="btn-close-github-modal" class="btn-icon"><i data-lucide="x"></i></button>
+      </div>
+      
+      <div class="modal-body">
+        <p class="modal-desc">Connect your GitHub account or Personal Access Token (PAT) to select any repository. The AI will read code, make fixes/features, and automatically commit changes directly!</p>
+
+        <!-- Token Connection Section -->
+        <div class="github-token-section">
+          <label>GitHub Personal Access Token (or sign in via GitHub)</label>
+          <div class="input-row">
+            <input type="password" id="github-token-input" class="form-input" placeholder="ghp_yourPersonalAccessTokenWithRepoScope..." autocomplete="off">
+            <button id="btn-save-github-token" class="btn-primary">
+              <i data-lucide="key"></i> Connect Token
+            </button>
+            <button id="btn-modal-github-login" class="btn-auth btn-github-signin" style="padding:8px 14px; font-size:0.82rem;">
+              <i data-lucide="log-in"></i> OAuth Login
+            </button>
+          </div>
+          <span class="help-text">Need a token? Generate one in <a href="https://github.com/settings/tokens/new?scopes=repo" target="_blank" style="color:var(--accent-cyan);">GitHub Settings &gt; Developer settings &gt; Personal access tokens</a> with <strong>repo</strong> scope.</span>
+        </div>
+
+        <div id="github-connected-banner" class="github-connected-banner hidden">
+          <div class="connected-user">
+            <img id="github-user-avatar" class="user-avatar-small" alt="GitHub User">
+            <div>
+              <strong id="github-username">Connected</strong>
+              <div class="status-indicator"><span class="dot-live"></span> Ready for Auto-Commits</div>
+            </div>
+          </div>
+          <button id="btn-disconnect-github" class="btn-icon-tiny" title="Disconnect GitHub"><i data-lucide="unlink"></i> Disconnect</button>
+        </div>
+
+        <!-- Repository Selector -->
+        <div class="form-row">
+          <div class="form-group flex-2">
+            <label>Select Repository to Code &amp; Commit</label>
+            <div class="select-with-refresh">
+              <select id="github-repo-select" class="form-input">
+                <option value="">-- Choose a Repository --</option>
+              </select>
+              <button id="btn-refresh-repos" class="btn-icon" title="Refresh Repositories"><i data-lucide="refresh-cw"></i></button>
+            </div>
+          </div>
+
+          <div class="form-group flex-1">
+            <label>Target Branch</label>
+            <input type="text" id="github-branch-input" class="form-input" value="main" placeholder="main">
+          </div>
+        </div>
+
+        <!-- Quick File Explorer Tree -->
+        <div class="repo-tree-container">
+          <div class="tree-header">
+            <span>REPOSITORY FILES (<span id="tree-file-count">0</span>)</span>
+            <span class="tree-hint">AI will inspect and edit these files automatically</span>
+          </div>
+          <div id="repo-tree-list" class="repo-tree-list">
+            <div class="tree-empty">Connect GitHub and select a repository to explore files.</div>
+          </div>
+        </div>
+
+        <!-- Quick Action Footer -->
+        <div class="modal-footer-row">
+          <button id="btn-set-active-repo" class="btn-primary full-width">
+            <i data-lucide="check"></i> Set Active Repo for Autonomous Coding
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       5. 10X Supercharged AI Image Studio Modal
+       ========================================================================== -->
   <div id="image-modal" class="modal-overlay hidden">
     <div class="modal-card modal-lg">
       <div class="modal-header">
         <div class="modal-title">
-          <i data-lucide="image"></i>
-          <span>PRIME Image Generator Studio</span>
+          <i data-lucide="sparkles"></i>
+          <span>PRIME 10X Ultra-Photoreal Image Studio</span>
         </div>
         <button id="btn-close-image-modal" class="btn-icon"><i data-lucide="x"></i></button>
       </div>
       <div class="modal-body">
         <div class="form-group">
-          <label>Image Prompt</label>
-          <textarea id="image-prompt-text" class="form-input" rows="3" placeholder="Describe the image you want in detail..."></textarea>
+          <label>Describe Visual (Prompt)</label>
+          <textarea id="image-prompt-text" class="form-input" rows="3" placeholder="e.g. Luxurious futuristic penthouse interior overlooking neon rain cyber city at twilight..."></textarea>
         </div>
+        
         <div class="form-row">
-          <div class="form-group">
-            <label>Style Preset</label>
+          <div class="form-group flex-1">
+            <label>Master Style Preset</label>
             <select id="image-style-select" class="form-input">
-              <option value="" selected>Photorealistic / Natural</option>
-              <option value="photorealistic, 8k resolution, cinematic studio lighting, highly detailed">Photorealistic 8K</option>
-              <option value="hyper-realistic 3D render, octane render, architectural minimalism">Minimalist 3D</option>
-              <option value="modern digital art, crisp details, vibrant lighting">Digital Art</option>
-              <option value="luxury anime art style, vibrant aesthetic">Anime Masterpiece</option>
+              <option value="photorealistic 8k uhd, dslr master photography, 35mm photograph, cinematic lighting, ultra-detailed textures, realistic skin, volumetric atmosphere" selected>📸 8K Photorealistic Studio (DSLR)</option>
+              <option value="hyper-realistic 3D octane render, ray-tracing, architectural minimalism, award winning lighting">🏛️ 3D Octane Architecture</option>
+              <option value="cyberpunk cinematic realism, neon reflections, wet pavement, anamorphic bokeh, blade runner aesthetic">🌆 Cinematic Cyberpunk 8K</option>
+              <option value="celestial anime masterpiece, makoto shinkai aesthetic, luminous clouds, vibrant color grading">✨ Anime Masterpiece (Cinema)</option>
+              <option value="oil painting on canvas, master stroke, chiaroscuro lighting, textured museum artwork">🎨 Classical Fine Art</option>
             </select>
           </div>
-          <div class="form-group">
+
+          <div class="form-group flex-1">
             <label>Aspect Ratio</label>
             <select id="image-size-select" class="form-input">
               <option value="1024x1024" selected>Square (1:1 - 1024x1024)</option>
-              <option value="1280x720">Landscape (16:9 - 1280x720)</option>
-              <option value="720x1280">Portrait (9:16 - 720x1280)</option>
+              <option value="1280x720">Landscape Cinema (16:9 - 1280x720)</option>
+              <option value="720x1280">Portrait / Story (9:16 - 720x1280)</option>
+              <option value="1024x768">Classic Photo (4:3 - 1024x768)</option>
             </select>
           </div>
         </div>
+
         <button id="btn-do-generate-image" class="btn-primary full-width">
-          <span>Generate High-Resolution Visual</span>
+          <i data-lucide="sparkles"></i>
+          <span>Generate 10X Ultra-Resolution Visual</span>
         </button>
+
         <div id="image-result-box" class="image-result-box">
-          <div class="empty-preview"><i data-lucide="image"></i> Generated visual will render here</div>
+          <div class="empty-preview"><i data-lucide="image"></i> Generated 10X masterpiece will render here</div>
         </div>
       </div>
     </div>

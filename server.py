@@ -18,6 +18,11 @@ PORT = int(os.environ.get("PORT", 8080))
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 DATA_FILE = os.path.join(DIRECTORY, "prime_database.json")
 
+# Official GitHub OAuth Credentials
+GITHUB_CLIENT_ID = os.environ.get("GITHUB_CLIENT_ID", "Ov23ct8zx3BMaaxzqsb4")
+GITHUB_CLIENT_SECRET = os.environ.get("GITHUB_CLIENT_SECRET", "ef37dd80fc4a8be538e2015322f11f4fbe450b80")
+
+
 def load_db():
     if os.path.exists(DATA_FILE):
         try:
@@ -109,6 +114,87 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         parsed = urllib.parse.urlparse(self.path)
+        # GitHub OAuth Callback & Token Exchange
+        if parsed.path == '/api/auth/github/callback':
+            query_params = urllib.parse.parse_qs(parsed.query)
+            code = query_params.get('code', [''])[0]
+            token = ""
+            error_msg = ""
+            if code:
+                try:
+                    payload = json.dumps({
+                        "client_id": GITHUB_CLIENT_ID,
+                        "client_secret": GITHUB_CLIENT_SECRET,
+                        "code": code
+                    }).encode('utf-8')
+                    gh_req = urllib.request.Request(
+                        "https://github.com/login/oauth/access_token",
+                        data=payload,
+                        headers={
+                            "Content-Type": "application/json",
+                            "Accept": "application/json",
+                            "User-Agent": "PrimeSystem-OAuth"
+                        }
+                    )
+                    with urllib.request.urlopen(gh_req, timeout=10) as resp:
+                        gh_data = json.loads(resp.read().decode('utf-8'))
+                        token = gh_data.get("access_token", "")
+                        if not token:
+                            error_msg = gh_data.get("error_description", "Failed to retrieve access token")
+                except Exception as e:
+                    error_msg = str(e)
+
+            html_page = f"""<!DOCTYPE html>
+<html>
+<head>
+    <title>GitHub Authorization - PRIME SYSTEM</title>
+    <style>
+        body {{ background: #05080f; color: #00c8ff; font-family: system-ui, sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; text-align: center; }}
+        .box {{ background: #0c121d; border: 1px solid rgba(0,200,255,0.3); border-radius: 12px; padding: 30px; max-width: 420px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); }}
+        h2 {{ margin-top: 0; color: #fff; }}
+        p {{ color: #94a3b8; font-size: 0.9rem; }}
+        .success {{ color: #3fb950; font-weight: bold; }}
+        .error {{ color: #ef4444; }}
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h2>🐙 PRIME SYSTEM GitHub Link</h2>
+        {'<p class="success">Authorization Successful! Connecting to PRIME SYSTEM...</p>' if token else f'<p class="error">Authorization Error: {error_msg}</p>'}
+        <p>This window will close automatically.</p>
+    </div>
+    <script>
+        const token = "{token}";
+        if (token) {{
+            if (window.opener) {{
+                window.opener.postMessage({{ type: 'PRIME_GITHUB_OAUTH_TOKEN', token: token }}, '*');
+                setTimeout(() => window.close(), 600);
+            }} else {{
+                window.location.href = '/?github_token=' + encodeURIComponent(token);
+            }}
+        }} else {{
+            setTimeout(() => window.close(), 3000);
+        }}
+    </script>
+</body>
+</html>"""
+            resp_bytes = html_page.encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.send_header('Content-Length', str(len(resp_bytes)))
+            self.end_headers()
+            self.wfile.write(resp_bytes)
+            return
+
+        if parsed.path == '/api/auth/github/config':
+            data = {"clientId": GITHUB_CLIENT_ID}
+            resp_bytes = json.dumps(data).encode('utf-8')
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Content-Length', str(len(resp_bytes)))
+            self.end_headers()
+            self.wfile.write(resp_bytes)
+            return
         if parsed.path == '/api/admin/users':
             query_params = urllib.parse.parse_qs(parsed.query)
             key = query_params.get('key', [''])[0]
@@ -150,8 +236,43 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
             res_data = {"error": "Invalid endpoint"}
             status = 404
 
+            # 0. Direct GitHub Code Exchange
+            if clean_path == '/api/auth/github/token':
+                code = req_data.get('code', '')
+                if not code:
+                    res_data = {"error": "Missing code"}
+                    status = 400
+                else:
+                    try:
+                        payload = json.dumps({
+                            "client_id": GITHUB_CLIENT_ID,
+                            "client_secret": GITHUB_CLIENT_SECRET,
+                            "code": code
+                        }).encode('utf-8')
+                        gh_req = urllib.request.Request(
+                            "https://github.com/login/oauth/access_token",
+                            data=payload,
+                            headers={
+                                "Content-Type": "application/json",
+                                "Accept": "application/json",
+                                "User-Agent": "PrimeSystem-OAuth"
+                            }
+                        )
+                        with urllib.request.urlopen(gh_req, timeout=10) as resp:
+                            gh_data = json.loads(resp.read().decode('utf-8'))
+                            token = gh_data.get("access_token", "")
+                            if token:
+                                res_data = {"success": True, "token": token}
+                                status = 200
+                            else:
+                                res_data = {"success": False, "error": gh_data.get("error_description", "Failed to exchange code")}
+                                status = 400
+                    except Exception as e:
+                        res_data = {"success": False, "error": str(e)}
+                        status = 500
+
             # 1. Register User
-            if clean_path == '/api/auth/register':
+            elif clean_path == '/api/auth/register':
                 username = req_data.get('username', '').strip().lower()
                 display_name = req_data.get('username', '').strip()
                 password = req_data.get('password', '')
