@@ -17,7 +17,7 @@ const AppState = {
   },
   settings: {
     baseUrl: 'https://kiraai.vn/api/v1',
-    apiKey: 'kira_9d03a8f658960d433b1a00d7570b5c32',
+    apiKey: 'kira_b27bf16cdc12f83497204f1460c8e3f9',
     model: 'prime-coder-100x',
     persona: 'female',
     temperature: 0.4,
@@ -349,72 +349,58 @@ function initAuth() {
   // GitHub Login Handler (Direct OAuth Popup with repo scope)
   async function triggerGitHubSignIn() {
     if (errorBox) errorBox.classList.add('hidden');
+    const githubBtn = document.getElementById('btn-github-login');
+    const navGithubBtn = document.getElementById('btn-nav-github-login');
 
-    // 1. First attempt: Direct GitHub OAuth Popup with your Client ID
-    const redirectUri = `${window.location.origin}/api/auth/github/callback`;
-    const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=repo,user&redirect_uri=${encodeURIComponent(redirectUri)}`;
-    
-    const popupWidth = 600;
-    const popupHeight = 700;
-    const left = window.screen.width / 2 - popupWidth / 2;
-    const top = window.screen.height / 2 - popupHeight / 2;
+    if (githubBtn) { githubBtn.disabled = true; githubBtn.style.opacity = '0.7'; }
+    if (navGithubBtn) { navGithubBtn.disabled = true; navGithubBtn.style.opacity = '0.7'; }
 
-    const popup = window.open(
-      authUrl,
-      'GitHub_OAuth_Login',
-      `width=${popupWidth},height=${popupHeight},top=${top},left=${left},status=yes,scrollbars=yes`
-    );
+    if (typeof firebase !== 'undefined' && firebase.auth) {
+      try {
+        const provider = new firebase.auth.GithubAuthProvider();
+        provider.addScope('repo'); // Grant full repo read/write access for autonomous commits
+        provider.addScope('user');
+        provider.setCustomParameters({ allow_signup: 'true' });
 
-    // Fallback if popup is blocked
-    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-      // Try Firebase OAuth provider as fallback
-      if (typeof firebase !== 'undefined' && firebase.auth) {
-        try {
-          const provider = new firebase.auth.GithubAuthProvider();
-          provider.addScope('repo');
-          provider.addScope('user');
-          const res = await firebase.auth().signInWithPopup(provider);
-          const credential = firebase.auth.GithubAuthProvider.credentialFromResult(res);
-          const token = credential.accessToken;
-          const u = res.user;
+        const result = await firebase.auth().signInWithPopup(provider);
+        const credential = firebase.auth.GithubAuthProvider.credentialFromResult(result);
+        const token = credential ? credential.accessToken : null;
+        const user = result.user;
 
-          if (token) {
-            AppState.github.token = token;
-            localStorage.setItem('prime_gh_token', token);
-            syncGitHubAccount(token);
-          }
-
-          const userData = {
-            uid: u.uid,
-            displayName: u.displayName || u.reloadUserInfo?.screenName || 'Developer',
-            email: u.email,
-            photoURL: u.photoURL
-          };
-          localStorage.setItem('prime_logged_user', JSON.stringify(userData));
-          setUserLoggedInUI(userData);
-          return;
-        } catch (e) {
-          handleAuthFallback(e, 'GitHub');
-          return;
+        if (token) {
+          AppState.github.token = token;
+          localStorage.setItem('prime_gh_token', token);
+          await syncGitHubAccount(token);
         }
-      }
-      openGitHubModal();
-    }
-  }
 
-  function handleAuthFallback(err, providerName) {
-    console.warn(`${providerName} Sign-In fallback triggered:`, err);
-    const promptName = prompt(`Please enter your Name or Username to continue with ${providerName}:`, "Developer");
-    if (promptName) {
-      const cleanName = promptName.includes('@') ? promptName.split('@')[0] : promptName;
-      const demoUser = {
-        uid: 'user_' + Date.now(),
-        displayName: cleanName,
-        email: promptName.includes('@') ? promptName : `${cleanName.toLowerCase()}@gmail.com`,
-        photoURL: `https://api.dicebear.com/7.x/bottts/svg?seed=${cleanName}`
-      };
-      localStorage.setItem('prime_logged_user', JSON.stringify(demoUser));
-      setUserLoggedInUI(demoUser);
+        const userData = {
+          uid: user.uid,
+          displayName: user.displayName || user.reloadUserInfo?.screenName || 'GitHub Developer',
+          email: user.email,
+          photoURL: user.photoURL
+        };
+        localStorage.setItem('prime_logged_user', JSON.stringify(userData));
+        setUserLoggedInUI(userData);
+      } catch (err) {
+        console.error('Firebase GitHub Auth Error:', err);
+        if (err.code === 'auth/account-exists-with-different-credential') {
+          alert('Notice: This email is already associated with Google. Please Sign In with Google or paste your GitHub Token in the GitHub Studio tab.');
+          openGitHubModal();
+        } else if (err.code === 'auth/popup-closed-by-user') {
+          // User closed popup
+        } else {
+          if (errorBox) {
+            errorBox.textContent = err.message || 'Firebase GitHub login failed. Please ensure Callback URL is set in GitHub OAuth settings.';
+            errorBox.classList.remove('hidden');
+          }
+          openGitHubModal();
+        }
+      } finally {
+        if (githubBtn) { githubBtn.disabled = false; githubBtn.style.opacity = '1'; }
+        if (navGithubBtn) { navGithubBtn.disabled = false; navGithubBtn.style.opacity = '1'; }
+      }
+    } else {
+      openGitHubModal();
     }
   }
 

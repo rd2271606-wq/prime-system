@@ -401,7 +401,7 @@ class PrimeHandler(http.server.SimpleHTTPRequestHandler):
             elif clean_path == '/api/generate-image':
                 prompt = req_data.get('prompt', '').strip()
                 size = req_data.get('size', '1024x1024')
-                api_key = req_data.get('apiKey', 'kira_9d03a8f658960d433b1a00d7570b5c32')
+                api_key = req_data.get('apiKey', 'kira_b27bf16cdc12f83497204f1460c8e3f9')
                 base_url = req_data.get('baseUrl', 'https://kiraai.vn/api/v1')
 
                 if not prompt:
