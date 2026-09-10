@@ -323,6 +323,35 @@ function initAuth() {
     } catch (err) {}
   }
 
+  // Handle Redirect Sign-in Result (for mobile / popup-blocked environments)
+  if (typeof firebase !== 'undefined' && firebase.auth) {
+    try {
+      firebase.auth().getRedirectResult().then(async (result) => {
+        if (result && result.user) {
+          const u = result.user;
+          const credential = result.credential;
+          const ghToken = credential ? credential.accessToken : null;
+
+          if (ghToken) {
+            AppState.github.token = ghToken;
+            localStorage.setItem('prime_gh_token', ghToken);
+            await syncGitHubAccount(ghToken);
+          }
+
+          const userData = {
+            uid: u.uid,
+            displayName: u.displayName || u.reloadUserInfo?.screenName || 'Developer',
+            email: u.email,
+            photoURL: u.photoURL
+          };
+          localStorage.setItem('prime_logged_user', JSON.stringify(userData));
+          setUserLoggedInUI(userData);
+        }
+      }).catch((e) => console.warn('Redirect auth notice:', e));
+    } catch (e) {}
+  }
+
+
   // Google Login Handler
   async function triggerGoogleSignIn() {
     if (errorBox) errorBox.classList.add('hidden');
@@ -466,13 +495,24 @@ function handleLogout() {
 }
 
 // ==========================================================================
-// 6. GitHub Integration & Repository Management
+// 6. Visual GitHub Repositories Hub (Zero Token Hassle!)
 // ==========================================================================
 
 async function checkGitHubAutoInit() {
   const token = AppState.github.token;
   if (token) {
     await syncGitHubAccount(token);
+  } else {
+    // Check if user has a saved GitHub login or username
+    const saved = localStorage.getItem('prime_logged_user');
+    if (saved) {
+      try {
+        const u = JSON.parse(saved);
+        if (u.displayName && !u.displayName.includes('@')) {
+          loadPublicRepositories(u.displayName);
+        }
+      } catch (e) {}
+    }
   }
   updateRepoBadges();
 }
@@ -481,12 +521,17 @@ async function syncGitHubAccount(token) {
   try {
     const user = await GitHubAPI.fetchCurrentUser(token);
     AppState.github.user = user;
-    const banner = document.getElementById('github-connected-banner');
-    const avatar = document.getElementById('github-user-avatar');
-    const username = document.getElementById('github-username');
-    if (banner) banner.classList.remove('hidden');
-    if (avatar) avatar.src = user.avatar_url;
-    if (username) username.textContent = `${user.login} (${user.name || 'Developer'})`;
+    
+    // Update Hub status
+    const hubConnectBtn = document.getElementById('btn-hub-github-connect');
+    const hubUserBadge = document.getElementById('hub-user-badge');
+    const hubAvatar = document.getElementById('hub-user-avatar');
+    const hubUsername = document.getElementById('hub-username-label');
+
+    if (hubConnectBtn) hubConnectBtn.classList.add('hidden');
+    if (hubUserBadge) hubUserBadge.classList.remove('hidden');
+    if (hubAvatar) hubAvatar.src = user.avatar_url;
+    if (hubUsername) hubUsername.textContent = user.login;
 
     await loadUserRepositories();
   } catch (e) {
@@ -494,26 +539,153 @@ async function syncGitHubAccount(token) {
   }
 }
 
+async function loadPublicRepositories(username) {
+  try {
+    const res = await fetch(`https://api.github.com/users/${username}/repos?sort=updated&per_page=100`);
+    if (res.ok) {
+      const repos = await res.json();
+      AppState.github.repos = repos;
+      renderRepositoryCards();
+    }
+  } catch (e) {}
+}
+
 async function loadUserRepositories() {
+  const grid = document.getElementById('repo-cards-grid');
+  if (grid) {
+    grid.innerHTML = `
+      <div class="repo-loading-box">
+        <i data-lucide="loader-2" class="spin-icon"></i>
+        <span>Loading your GitHub repositories...</span>
+      </div>
+    `;
+    try { if (window.lucide) lucide.createIcons(); } catch (e) {}
+  }
+
   try {
     const repos = await GitHubAPI.fetchUserRepos();
     AppState.github.repos = repos;
-    const select = document.getElementById('github-repo-select');
-    select.innerHTML = '<option value="">-- Choose a Repository --</option>';
-
-    repos.forEach(r => {
-      const opt = document.createElement('option');
-      opt.value = r.full_name;
-      opt.textContent = `${r.full_name} ${r.private ? '🔒' : '🌐'} (${r.default_branch})`;
-      if (AppState.github.selectedRepo === r.full_name) opt.selected = true;
-      select.appendChild(opt);
-    });
+    renderRepositoryCards();
+    renderSidebarRepoList();
 
     if (AppState.github.selectedRepo) {
       await inspectRepoFiles(AppState.github.selectedRepo);
     }
   } catch (e) {
-    console.warn("Repo fetch error:", e);
+    if (grid) {
+      grid.innerHTML = `
+        <div class="repo-empty-box">
+          <i data-lucide="alert-circle" style="color:#ef4444; width:32px; height:32px;"></i>
+          <span>Failed to load repositories: ${e.message}</span>
+          <button class="btn-primary" onclick="triggerGitHubSignIn()" style="margin-top:8px;">Connect with GitHub</button>
+        </div>
+      `;
+      try { if (window.lucide) lucide.createIcons(); } catch (e) {}
+    }
+  }
+}
+
+function renderRepositoryCards(filter = '') {
+  const grid = document.getElementById('repo-cards-grid');
+  const countBadge = document.getElementById('repo-count-badge');
+  if (!grid) return;
+
+  const query = filter.toLowerCase().trim();
+  const repos = AppState.github.repos.filter(r => {
+    if (!query) return true;
+    return r.name.toLowerCase().includes(query) || (r.description && r.description.toLowerCase().includes(query));
+  });
+
+  if (countBadge) countBadge.textContent = `${repos.length} Repos`;
+  grid.innerHTML = '';
+
+  if (repos.length === 0) {
+    grid.innerHTML = `
+      <div class="repo-empty-box">
+        <i data-lucide="folder-search" style="width:36px; height:36px; color:var(--text-muted);"></i>
+        <span>${filter ? 'No repositories match your search.' : 'No repositories found. Connect your GitHub account to see all your repos.'}</span>
+        ${!AppState.github.token ? '<button class="btn-primary" onclick="triggerGitHubSignIn()" style="margin-top:8px;"><i data-lucide="github"></i> Connect GitHub</button>' : ''}
+      </div>
+    `;
+    try { if (window.lucide) lucide.createIcons(); } catch (e) {}
+    return;
+  }
+
+  repos.forEach(r => {
+    const isSelected = AppState.github.selectedRepo === r.full_name;
+    const card = document.createElement('div');
+    card.className = `repo-card ${isSelected ? 'active' : ''}`;
+    card.onclick = () => selectRepository(r.full_name, r.default_branch || 'main');
+
+    card.innerHTML = `
+      <div class="repo-card-header">
+        <span class="repo-card-name">${r.name}</span>
+        <span class="repo-vis-badge ${r.private ? 'private' : ''}">${r.private ? 'Private 🔒' : 'Public 🌐'}</span>
+      </div>
+      <div class="repo-card-desc">${r.description || 'No description provided.'}</div>
+      <div class="repo-card-footer">
+        <div class="repo-lang-tag">
+          <span class="lang-dot"></span>
+          <span>${r.language || 'Code'}</span>
+        </div>
+        <button class="btn-select-repo" type="button">
+          ${isSelected ? '✓ Selected' : '⚡ Code with AI'}
+        </button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+
+  try { if (window.lucide) lucide.createIcons(); } catch (e) {}
+}
+
+function renderSidebarRepoList() {
+  const sbList = document.getElementById('sidebar-repo-list');
+  if (!sbList) return;
+  sbList.innerHTML = '';
+
+  if (AppState.github.repos.length === 0) {
+    sbList.innerHTML = `<div class="sidebar-repo-empty">No repos loaded yet. <a href="#" onclick="openGitHubModal(); return false;" style="color:var(--accent-cyan);">Connect</a></div>`;
+    return;
+  }
+
+  AppState.github.repos.slice(0, 15).forEach(r => {
+    const isSelected = AppState.github.selectedRepo === r.full_name;
+    const item = document.createElement('div');
+    item.className = `sidebar-repo-item ${isSelected ? 'active' : ''}`;
+    item.onclick = () => selectRepository(r.full_name, r.default_branch || 'main');
+    item.innerHTML = `
+      <div class="sidebar-repo-name">
+        <i data-lucide="${r.private ? 'lock' : 'folder-git-2'}"></i>
+        <span>${r.name}</span>
+      </div>
+      ${isSelected ? '<span style="color:#10b981; font-size:0.7rem;">●</span>' : ''}
+    `;
+    sbList.appendChild(item);
+  });
+
+  try { if (window.lucide) lucide.createIcons(); } catch (e) {}
+}
+
+async function selectRepository(fullRepoName, branch = 'main') {
+  AppState.github.selectedRepo = fullRepoName;
+  AppState.github.selectedBranch = branch;
+  localStorage.setItem('prime_gh_repo', fullRepoName);
+  localStorage.setItem('prime_gh_branch', branch);
+
+  updateRepoBadges();
+  renderRepositoryCards(document.getElementById('repo-search-input')?.value || '');
+  renderSidebarRepoList();
+
+  const branchInput = document.getElementById('github-branch-input');
+  if (branchInput) branchInput.value = branch;
+
+  await inspectRepoFiles(fullRepoName);
+
+  // Friendly greeting in input placeholder
+  const input = document.getElementById('chat-input');
+  if (input) {
+    input.placeholder = `Ask 100X Coder to write code or commit to ${fullRepoName}...`;
   }
 }
 
@@ -524,11 +696,12 @@ async function inspectRepoFiles(fullRepoName) {
   const treeContainer = document.getElementById('repo-tree-list');
   const countSpan = document.getElementById('tree-file-count');
 
-  treeContainer.innerHTML = '<div class="tree-empty">Fetching file hierarchy...</div>';
+  if (treeContainer) treeContainer.innerHTML = '<div class="tree-empty">Fetching file hierarchy...</div>';
   const files = await GitHubAPI.fetchRepoTree(owner, repo, branch);
   AppState.github.files = files;
 
   if (countSpan) countSpan.textContent = files.length;
+  if (!treeContainer) return;
   treeContainer.innerHTML = '';
 
   if (files.length === 0) {
@@ -549,15 +722,24 @@ function updateRepoBadges() {
   const repoName = AppState.github.selectedRepo || 'No Repo Selected';
   const sidebarRepo = document.getElementById('sidebar-repo-name');
   const navRepo = document.getElementById('nav-repo-label');
+  const hubActiveTitle = document.getElementById('hub-active-repo-name');
+
   if (sidebarRepo) sidebarRepo.textContent = repoName;
   if (navRepo) navRepo.textContent = repoName !== 'No Repo Selected' ? repoName : 'Select Repo';
+  if (hubActiveTitle) hubActiveTitle.textContent = repoName;
 }
 
 function openGitHubModal() {
   const modal = document.getElementById('github-modal');
   modal.classList.remove('hidden');
-  if (AppState.github.token && AppState.github.repos.length === 0) {
-    loadUserRepositories();
+  updateRepoBadges();
+  if (AppState.github.repos.length === 0) {
+    if (AppState.github.token) loadUserRepositories();
+    else {
+      renderRepositoryCards();
+    }
+  } else {
+    renderRepositoryCards();
   }
 }
 
@@ -1474,62 +1656,56 @@ document.addEventListener('DOMContentLoaded', () => {
     AppState.settings.model = e.target.value;
   };
 
-  // GitHub Modal Controls
+  // GitHub Visual Repositories Hub Controls (Zero Token Hassle!)
   document.getElementById('btn-quick-github').onclick = openGitHubModal;
   document.getElementById('btn-close-github-modal').onclick = closeGitHubModal;
 
-  document.getElementById('btn-save-github-token').onclick = async () => {
-    const token = document.getElementById('github-token-input').value.trim();
-    if (!token) return alert('Please paste your GitHub Personal Access Token.');
-    AppState.github.token = token;
-    localStorage.setItem('prime_gh_token', token);
-    await syncGitHubAccount(token);
-    alert('GitHub Token Connected Successfully!');
-  };
+  const repoSearchInput = document.getElementById('repo-search-input');
+  if (repoSearchInput) {
+    repoSearchInput.oninput = (e) => renderRepositoryCards(e.target.value);
+  }
 
-  document.getElementById('btn-modal-github-login').onclick = () => {
-    document.getElementById('btn-github-login')?.click();
-  };
+  const hubConnectBtn = document.getElementById('btn-hub-github-connect');
+  if (hubConnectBtn) {
+    hubConnectBtn.onclick = () => triggerGitHubSignIn();
+  }
 
-  document.getElementById('btn-disconnect-github').onclick = () => {
-    if (confirm('Disconnect GitHub account?')) {
-      AppState.github.token = null;
-      AppState.github.user = null;
-      AppState.github.selectedRepo = null;
-      AppState.github.files = [];
-      localStorage.removeItem('prime_gh_token');
-      localStorage.removeItem('prime_gh_repo');
-      document.getElementById('github-connected-banner').classList.add('hidden');
-      updateRepoBadges();
-      alert('GitHub disconnected.');
-    }
-  };
+  const sidebarRefresh = document.getElementById('btn-sidebar-refresh-repos');
+  if (sidebarRefresh) {
+    sidebarRefresh.onclick = () => loadUserRepositories();
+  }
 
-  document.getElementById('btn-refresh-repos').onclick = () => {
-    if (AppState.github.token) loadUserRepositories();
-    else alert('Please connect GitHub first.');
-  };
+  const disconnectBtn = document.getElementById('btn-disconnect-github');
+  if (disconnectBtn) {
+    disconnectBtn.onclick = () => {
+      if (confirm('Disconnect GitHub account?')) {
+        AppState.github.token = null;
+        AppState.github.user = null;
+        AppState.github.selectedRepo = null;
+        AppState.github.repos = [];
+        AppState.github.files = [];
+        localStorage.removeItem('prime_gh_token');
+        localStorage.removeItem('prime_gh_repo');
+        updateRepoBadges();
+        renderRepositoryCards();
+        renderSidebarRepoList();
+        document.getElementById('btn-hub-github-connect')?.classList.remove('hidden');
+        document.getElementById('hub-user-badge')?.classList.add('hidden');
+      }
+    };
+  }
 
-  document.getElementById('github-repo-select').onchange = async (e) => {
-    const repo = e.target.value;
-    if (repo) {
-      await inspectRepoFiles(repo);
-    }
-  };
-
-  document.getElementById('btn-set-active-repo').onclick = () => {
-    const repo = document.getElementById('github-repo-select').value;
-    const branch = document.getElementById('github-branch-input').value.trim() || 'main';
-    if (!repo) return alert('Please select a repository first.');
-
-    AppState.github.selectedRepo = repo;
-    AppState.github.selectedBranch = branch;
-    localStorage.setItem('prime_gh_repo', repo);
-    localStorage.setItem('prime_gh_branch', branch);
-    updateRepoBadges();
-    closeGitHubModal();
-    alert(`Success! Active repo set to: ${repo} [${branch}]. Now simply ask PRIME CODER to code and it will auto-commit directly to GitHub!`);
-  };
+  const branchInput = document.getElementById('github-branch-input');
+  if (branchInput) {
+    branchInput.onchange = (e) => {
+      const b = e.target.value.trim() || 'main';
+      AppState.github.selectedBranch = b;
+      localStorage.setItem('prime_gh_branch', b);
+      if (AppState.github.selectedRepo) {
+        inspectRepoFiles(AppState.github.selectedRepo);
+      }
+    };
+  }
 
   // Image Studio Modal Controls
   const imageModal = document.getElementById('image-modal');

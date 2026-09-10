@@ -172,6 +172,15 @@
         </button>
       </div>
 
+      <!-- Dedicated GitHub Repositories List in Sidebar -->
+      <div class="sidebar-section-header">
+        <span>MY GITHUB REPOSITORIES</span>
+        <button id="btn-sidebar-refresh-repos" class="btn-icon-tiny" title="Refresh Repositories"><i data-lucide="refresh-cw"></i></button>
+      </div>
+      <div id="sidebar-repo-list" class="sidebar-repo-list">
+        <!-- Injected dynamically -->
+      </div>
+
       <!-- Chat History List -->
       <div class="sidebar-section-header">
         <span>CONVERSATIONS</span>
@@ -343,78 +352,70 @@
        4. GitHub Autonomous Repository Control Modal
        ========================================================================== -->
   <div id="github-modal" class="modal-overlay hidden">
-    <div class="modal-card modal-lg">
+    <div class="modal-card modal-xl">
       <div class="modal-header">
         <div class="modal-title">
-          <i data-lucide="github"></i>
-          <span>GitHub Autonomous Repository Control</span>
+          <i data-lucide="folder-git-2"></i>
+          <span>GitHub Repositories Hub</span>
         </div>
         <button id="btn-close-github-modal" class="btn-icon"><i data-lucide="x"></i></button>
       </div>
       
       <div class="modal-body">
-        <p class="modal-desc">Connect your GitHub account or Personal Access Token (PAT) to select any repository. The AI will read code, make fixes/features, and automatically commit changes directly!</p>
-
-        <!-- Token Connection Section -->
-        <div class="github-token-section">
-          <label>GitHub Personal Access Token (or sign in via GitHub)</label>
-          <div class="input-row">
-            <input type="password" id="github-token-input" class="form-input" placeholder="ghp_yourPersonalAccessTokenWithRepoScope..." autocomplete="off">
-            <button id="btn-save-github-token" class="btn-primary">
-              <i data-lucide="key"></i> Connect Token
-            </button>
-            <button id="btn-modal-github-login" class="btn-auth btn-github-signin" style="padding:8px 14px; font-size:0.82rem;">
-              <i data-lucide="log-in"></i> OAuth Login
-            </button>
+        <!-- Top Toolbar: Search + 1-Click Connect Button -->
+        <div class="repo-hub-topbar">
+          <div class="search-box-wrap">
+            <i data-lucide="search"></i>
+            <input type="text" id="repo-search-input" class="form-input" placeholder="Search your repositories (e.g. primesystem, react, python)...">
           </div>
-          <span class="help-text">Need a token? Generate one in <a href="https://github.com/settings/tokens/new?scopes=repo" target="_blank" style="color:var(--accent-cyan);">GitHub Settings &gt; Developer settings &gt; Personal access tokens</a> with <strong>repo</strong> scope.</span>
+          <div id="hub-auth-section" class="hub-auth-section">
+            <button id="btn-hub-github-connect" class="btn-auth btn-github-signin" style="padding: 7px 14px; font-size: 0.8rem;">
+              <i data-lucide="github"></i> <span>Connect GitHub</span>
+            </button>
+            <div id="hub-user-badge" class="hub-user-badge hidden">
+              <img id="hub-user-avatar" class="user-avatar-small" alt="Avatar">
+              <span id="hub-username-label">Connected</span>
+              <button id="btn-disconnect-github" class="btn-icon-tiny" title="Disconnect"><i data-lucide="unlink"></i></button>
+            </div>
+          </div>
         </div>
 
-        <div id="github-connected-banner" class="github-connected-banner hidden">
-          <div class="connected-user">
-            <img id="github-user-avatar" class="user-avatar-small" alt="GitHub User">
+        <!-- Active Selected Repository Banner -->
+        <div id="active-repo-banner" class="active-repo-banner">
+          <div class="active-repo-left">
+            <div class="pulse-dot"></div>
             <div>
-              <strong id="github-username">Connected</strong>
-              <div class="status-indicator"><span class="dot-live"></span> Ready for Auto-Commits</div>
+              <div class="active-repo-tag">ACTIVE REPO FOR 100X CODING &amp; COMMITS</div>
+              <div id="hub-active-repo-name" class="active-repo-title">No Repository Selected</div>
             </div>
           </div>
-          <button id="btn-disconnect-github" class="btn-icon-tiny" title="Disconnect GitHub"><i data-lucide="unlink"></i> Disconnect</button>
-        </div>
-
-        <!-- Repository Selector -->
-        <div class="form-row">
-          <div class="form-group flex-2">
-            <label>Select Repository to Code &amp; Commit</label>
-            <div class="select-with-refresh">
-              <select id="github-repo-select" class="form-input">
-                <option value="">-- Choose a Repository --</option>
-              </select>
-              <button id="btn-refresh-repos" class="btn-icon" title="Refresh Repositories"><i data-lucide="refresh-cw"></i></button>
-            </div>
-          </div>
-
-          <div class="form-group flex-1">
-            <label>Target Branch</label>
-            <input type="text" id="github-branch-input" class="form-input" value="main" placeholder="main">
+          <div class="active-branch-control">
+            <label>Branch:</label>
+            <input type="text" id="github-branch-input" class="form-input-inline" value="main" placeholder="main">
           </div>
         </div>
 
-        <!-- Quick File Explorer Tree -->
+        <!-- Visual Repositories Cards Grid -->
+        <div class="repo-section-title">
+          <span>SELECT A REPO BELOW TO CODE &amp; DIRECT COMMIT</span>
+          <span id="repo-count-badge" class="count-badge">0 Repos</span>
+        </div>
+        <div id="repo-cards-grid" class="repo-cards-grid">
+          <div class="repo-loading-box">
+            <i data-lucide="loader-2" class="spin-icon"></i>
+            <span>Loading your GitHub repositories...</span>
+          </div>
+        </div>
+
+        <!-- Quick File Explorer Tree for Selected Repo -->
         <div class="repo-tree-container">
           <div class="tree-header">
-            <span>REPOSITORY FILES (<span id="tree-file-count">0</span>)</span>
-            <span class="tree-hint">AI will inspect and edit these files automatically</span>
+            <span>FILES IN SELECTED REPO (<span id="tree-file-count">0</span>)</span>
+            <span class="tree-hint">100X Coder edits &amp; auto-commits to these files</span>
           </div>
           <div id="repo-tree-list" class="repo-tree-list">
-            <div class="tree-empty">Connect GitHub and select a repository to explore files.</div>
+            <div class="tree-empty">Select any repository card above to view files.</div>
           </div>
-        </div>
-
-        <!-- Quick Action Footer -->
-        <div class="modal-footer-row">
-          <button id="btn-set-active-repo" class="btn-primary full-width">
-            <i data-lucide="check"></i> Set Active Repo for Autonomous Coding
-          </button>
         </div>
       </div>
     </div>
