@@ -17,7 +17,7 @@ const AppState = {
   },
   settings: {
     baseUrl: 'https://kiraai.vn/api/v1',
-    apiKey: 'kira_b27bf16cdc12f83497204f1460c8e3f9',
+    apiKey: 'kira_ac6f33350a000b498266bf6feca324b3',
     model: 'prime-coder-100x',
     persona: 'female',
     temperature: 0.4,
